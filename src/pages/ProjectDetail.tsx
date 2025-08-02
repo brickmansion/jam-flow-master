@@ -340,7 +340,7 @@ export default function ProjectDetail() {
         }
       }
     }
-  }, [user?.id, id]);
+  }, [user?.id, id, project]);
 
   return (
     <div className="min-h-screen bg-background">
