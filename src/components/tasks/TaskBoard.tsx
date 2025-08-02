@@ -60,10 +60,21 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
   };
 
   const loadDemoTasks = () => {
-    // Demo tasks for demo projects
+    // Check localStorage for any saved demo tasks for this project
+    const savedTasks = localStorage.getItem(`demo-tasks-${projectId}`);
+    if (savedTasks) {
+      try {
+        setTasks(JSON.parse(savedTasks));
+        return;
+      } catch (error) {
+        console.error('Error parsing saved demo tasks:', error);
+      }
+    }
+
+    // Default demo tasks for demo projects
     const demoTasks: Task[] = [
       {
-        id: 'demo-task-1',
+        id: `demo-task-1-${projectId}`,
         title: 'Record vocals',
         description: 'Record lead and backing vocals for the chorus',
         status: 'completed',
@@ -75,7 +86,7 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
         updated_at: '2025-08-01T10:00:00Z'
       },
       {
-        id: 'demo-task-2',
+        id: `demo-task-2-${projectId}`,
         title: 'Mix instrumental',
         description: 'Balance levels and add effects to the instrumental track',
         status: 'in_progress',
@@ -86,7 +97,7 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
         updated_at: '2025-08-01T11:00:00Z'
       },
       {
-        id: 'demo-task-3',
+        id: `demo-task-3-${projectId}`,
         title: 'Master final track',
         description: 'Final mastering and audio optimization',
         status: 'pending',
@@ -98,6 +109,8 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
       }
     ];
     setTasks(demoTasks);
+    // Save to localStorage for persistence
+    localStorage.setItem(`demo-tasks-${projectId}`, JSON.stringify(demoTasks));
   };
 
   const handleCreateTask = () => {

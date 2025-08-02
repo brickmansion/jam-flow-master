@@ -89,7 +89,36 @@ export function TaskDrawer({ open, onOpenChange, task, projectId, onTaskUpdate }
       return;
     }
 
+    const taskData = {
+      title: formData.title.trim(),
+      description: formData.description.trim() || null,
+      status: formData.status,
+      priority: formData.priority,
+      due_date: formData.due_date || null,
+      external_link: formData.external_link.trim() || null,
+      project_id: projectId
+    };
+
     if (user?.id === 'demo-user-id') {
+      // Handle demo mode task creation/updating with localStorage
+      const savedTasks = localStorage.getItem(`demo-tasks-${projectId}`);
+      let tasks = savedTasks ? JSON.parse(savedTasks) : [];
+      
+      if (task) {
+        // Update existing task
+        tasks = tasks.map((t: any) => t.id === task.id ? { ...t, ...taskData, updated_at: new Date().toISOString() } : t);
+      } else {
+        // Create new task
+        const newTask = { 
+          ...taskData, 
+          id: `demo-task-${Date.now()}`, 
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        tasks.push(newTask);
+      }
+      
+      localStorage.setItem(`demo-tasks-${projectId}`, JSON.stringify(tasks));
       toast.success(task ? 'Task updated! (Demo mode)' : 'Task created! (Demo mode)');
       onTaskUpdate();
       return;
@@ -97,15 +126,6 @@ export function TaskDrawer({ open, onOpenChange, task, projectId, onTaskUpdate }
 
     setLoading(true);
     try {
-      const taskData = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || null,
-        status: formData.status,
-        priority: formData.priority,
-        due_date: formData.due_date || null,
-        external_link: formData.external_link.trim() || null,
-        project_id: projectId
-      };
 
       if (task) {
         const { error } = await supabase
@@ -137,6 +157,12 @@ export function TaskDrawer({ open, onOpenChange, task, projectId, onTaskUpdate }
     if (!task) return;
     
     if (user?.id === 'demo-user-id') {
+      // Handle demo mode task deletion
+      const savedTasks = localStorage.getItem(`demo-tasks-${projectId}`);
+      if (savedTasks) {
+        const tasks = JSON.parse(savedTasks).filter((t: any) => t.id !== task.id);
+        localStorage.setItem(`demo-tasks-${projectId}`, JSON.stringify(tasks));
+      }
       toast.success('Task deleted! (Demo mode)');
       onTaskUpdate();
       return;
