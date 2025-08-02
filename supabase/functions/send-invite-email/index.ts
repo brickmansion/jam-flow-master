@@ -17,7 +17,7 @@ interface InviteEmailRequest {
   projectId: string;
 }
 
-const handler = async (req: Request): Promise<Response> => {
+serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,6 +25,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const { email, projectTitle, role, inviterName, projectId }: InviteEmailRequest = await req.json();
+
+    console.log('Sending invitation email to:', email, 'for project:', projectTitle);
 
     const emailResponse = await resend.emails.send({
       from: "SeshPrep <onboarding@resend.dev>",
@@ -44,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="color: #666; margin: 10px 0;"><strong>Invited by:</strong> ${inviterName}</p>
           </div>
           
-          <a href="${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com') || 'https://your-app-url.com'}/auth" 
+          <a href="https://6c1fe617-e800-45c7-84f0-6ca73e3e21c2.lovableproject.com/auth" 
              style="display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; margin: 20px 0;">
             Accept Invitation & Sign In
           </a>
@@ -79,6 +81,4 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   }
-};
-
-serve(handler);
+});
