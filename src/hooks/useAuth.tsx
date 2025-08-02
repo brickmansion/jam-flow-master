@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Create a mock user session for demo mode
     const mockUser = {
       id: 'demo-user-id',
-      email: 'demo@sessioncheck.com',
+      email: 'demo@seshprep.com',
       user_metadata: { role: 'producer' },
       created_at: new Date().toISOString(),
       app_metadata: {},

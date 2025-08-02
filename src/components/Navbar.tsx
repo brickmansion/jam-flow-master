@@ -19,7 +19,7 @@ interface NavbarProps {
   isDemoMode?: boolean;
 }
 
-export function Navbar({ title = 'SessionCheck', isDemoMode = false }: NavbarProps) {
+export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) {
   const { user, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();

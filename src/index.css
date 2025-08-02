@@ -38,7 +38,7 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
     
-    /* SessionCheck specific tokens */
+    /* SeshPrep specific tokens */
     --brand: 24 100% 50%; /* #FF6A00 */
     --brand-muted: 24 100% 95%;
     --kanban-todo: 210 40% 95%;
@@ -85,7 +85,7 @@ All colors MUST be HSL.
     --input: 217.2 32.6% 17.5%;
     --ring: 24 100% 50%;
     
-    /* SessionCheck specific tokens - dark mode */
+    /* SeshPrep specific tokens - dark mode */
     --brand: 24 100% 50%; /* #FF6A00 */
     --brand-muted: 24 100% 10%;
     --kanban-todo: 210 20% 15%;

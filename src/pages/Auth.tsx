@@ -82,7 +82,7 @@ export default function Auth() {
           <div className="flex justify-center mb-4">
             <Music className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Welcome to SessionCheck</CardTitle>
+          <CardTitle className="text-2xl">Welcome to SeshPrep</CardTitle>
           <CardDescription>
             Manage your music production projects with precision
           </CardDescription>

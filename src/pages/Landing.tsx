@@ -34,7 +34,7 @@ export default function Landing() {
           </h1>
           
           <p className="mb-8 text-xl text-muted-foreground">
-            SessionCheck helps music producers and engineers manage complex recording projects
+            SeshPrep helps music producers and engineers manage complex recording projects
             with precision. Track tasks, manage checklists, and collaborate seamlessly.
           </p>
           
@@ -135,7 +135,7 @@ export default function Landing() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="mb-4 text-3xl font-bold">Ready to Get Started?</h2>
           <p className="mb-8 text-xl text-muted-foreground">
-            Join professional producers and engineers who trust SessionCheck
+            Join professional producers and engineers who trust SeshPrep
             to manage their most important projects.
           </p>
           <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
