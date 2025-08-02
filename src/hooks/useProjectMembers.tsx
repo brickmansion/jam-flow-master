@@ -96,18 +96,48 @@ export function useProjectMembers(projectId: string) {
         return { success: true };
       }
 
+      // Get current user and project info for the email
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+
+      // Insert member into database
       const { data, error } = await supabase
         .from('project_members')
         .insert({
           project_id: projectId,
           email: email.toLowerCase().trim(),
           role,
-          invited_by: (await supabase.auth.getUser()).data.user?.id,
+          invited_by: user?.id,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Send invitation email
+      try {
+        const emailResponse = await supabase.functions.invoke('send-invite-email', {
+          body: {
+            email: email.toLowerCase().trim(),
+            projectTitle: projectData?.title || 'Untitled Project',
+            role: role,
+            inviterName: user?.email || 'A colleague',
+            projectId: projectId,
+          },
+        });
+
+        if (emailResponse.error) {
+          console.error('Error sending invitation email:', emailResponse.error);
+          // Don't fail the invitation if email fails
+        }
+      } catch (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        // Don't fail the invitation if email fails
+      }
 
       setMembers(prev => [...prev, data as ProjectMember]);
       
