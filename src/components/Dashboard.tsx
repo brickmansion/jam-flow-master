@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Calendar, Clock, TrendingUp, Music } from 'lucide-react';
+import { Plus, Calendar, Clock, TrendingUp, Music, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { Navbar } from '@/components/Navbar';
 import { NewProjectModal } from '@/components/modals/NewProjectModal';
+import { ProjectCollaborators } from '@/components/ProjectCollaborators';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -331,6 +334,11 @@ export default function Dashboard() {
                           Due {new Date(project.due_date).toLocaleDateString()}
                         </div>
                       )}
+                      
+                      <ProjectCollaborators 
+                        projectId={project.id}
+                        producerEmail={user?.email}
+                      />
                       
                       <ProjectProgress projectId={project.id} />
                     </div>
