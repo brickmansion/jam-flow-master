@@ -3,14 +3,31 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TaskCardProps {
   task: Task;
   onClick: () => void;
   onStatusChange: (taskId: string, status: Task['status']) => void;
+  isDragging?: boolean;
 }
 
-export function TaskCard({ task, onClick, onStatusChange }: TaskCardProps) {
+export function TaskCard({ task, onClick, onStatusChange, isDragging = false }: TaskCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging: isBeingDragged,
+  } = useDraggable({
+    id: task.id,
+    disabled: isDragging, // Disable dragging for the overlay
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  };
   const getPriorityColor = (priority: Task['priority']) => {
     switch (priority) {
       case 'high':
@@ -33,7 +50,13 @@ export function TaskCard({ task, onClick, onStatusChange }: TaskCardProps) {
 
   return (
     <div 
-      className="bg-background rounded-lg p-3 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`bg-background rounded-lg p-3 shadow-sm border cursor-pointer hover:shadow-md transition-shadow ${
+        isBeingDragged ? 'opacity-50' : ''
+      } ${isDragging ? 'rotate-3 scale-105' : ''}`}
       onClick={onClick}
     >
       <div className="space-y-2">

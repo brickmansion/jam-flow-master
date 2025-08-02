@@ -1,16 +1,26 @@
 import { Task } from './TaskBoard';
 import { TaskCard } from './TaskCard';
+import { useDroppable } from '@dnd-kit/core';
 
 interface TaskColumnProps {
+  id: string;
   title: string;
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onStatusChange: (taskId: string, status: Task['status']) => void;
 }
 
-export function TaskColumn({ title, tasks, onTaskClick, onStatusChange }: TaskColumnProps) {
+export function TaskColumn({ id, title, tasks, onTaskClick, onStatusChange }: TaskColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: id,
+  });
   return (
-    <div className="bg-muted/50 rounded-lg p-4">
+    <div 
+      ref={setNodeRef}
+      className={`bg-muted/50 rounded-lg p-4 transition-colors ${
+        isOver ? 'bg-muted/80 ring-2 ring-primary/50' : ''
+      }`}
+    >
       <div className="flex justify-between items-center mb-4">
         <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
           {title}
@@ -32,7 +42,7 @@ export function TaskColumn({ title, tasks, onTaskClick, onStatusChange }: TaskCo
         
         {tasks.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">
-            No tasks
+            Drop tasks here
           </div>
         )}
       </div>

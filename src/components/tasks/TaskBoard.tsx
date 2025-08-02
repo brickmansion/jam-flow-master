@@ -6,6 +6,17 @@ import { Plus } from 'lucide-react';
 import { TaskDrawer } from './TaskDrawer';
 import { TaskColumn } from './TaskColumn';
 import { toast } from 'sonner';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core';
+import { TaskCard } from './TaskCard';
 
 export interface Task {
   id: string;
@@ -30,6 +41,15 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     if (user && user.id !== 'demo-user-id') {
@@ -135,7 +155,15 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
 
   const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
     if (user?.id === 'demo-user-id') {
-      toast.success('Status updated! (Demo mode)');
+      // Update demo tasks in localStorage
+      const updatedTasks = tasks.map(task => 
+        task.id === taskId 
+          ? { ...task, status: newStatus, updated_at: new Date().toISOString() }
+          : task
+      );
+      setTasks(updatedTasks);
+      localStorage.setItem(`demo-tasks-${projectId}`, JSON.stringify(updatedTasks));
+      toast.success('Task status updated! (Demo mode)');
       return;
     }
 
@@ -158,6 +186,32 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
     }
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const task = tasks.find(t => t.id === active.id);
+    setActiveTask(task || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over) {
+      setActiveTask(null);
+      return;
+    }
+
+    const taskId = active.id as string;
+    const newStatus = over.id as Task['status'];
+    
+    // Check if the task is actually moving to a different column
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.status !== newStatus) {
+      handleStatusChange(taskId, newStatus);
+    }
+    
+    setActiveTask(null);
+  };
+
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -173,42 +227,60 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Project Tasks</h3>
-        <Button onClick={handleCreateTask} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {columns.map((column) => (
-          <TaskColumn
-            key={column.status}
-            title={column.title}
-            tasks={column.tasks}
-            onTaskClick={handleEditTask}
-            onStatusChange={handleStatusChange}
-          />
-        ))}
-      </div>
-
-      <TaskDrawer
-        open={isDrawerOpen}
-        onOpenChange={setIsDrawerOpen}
-        task={selectedTask}
-        projectId={projectId}
-        onTaskUpdate={handleTaskUpdate}
-      />
-
-      {user?.id === 'demo-user-id' && tasks.length > 0 && (
-        <div className="text-center py-4 px-4 bg-orange-50 dark:bg-orange-950/50 rounded-lg border border-orange-200 dark:border-orange-800">
-          <p className="text-sm text-orange-700 dark:text-orange-300">
-            Demo tasks shown. Sign up to create and manage real project tasks!
-          </p>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Project Tasks</h3>
+          <Button onClick={handleCreateTask} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
         </div>
-      )}
-    </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {columns.map((column) => (
+            <TaskColumn
+              key={column.status}
+              id={column.status}
+              title={column.title}
+              tasks={column.tasks}
+              onTaskClick={handleEditTask}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
+        </div>
+
+        <DragOverlay>
+          {activeTask && (
+            <TaskCard
+              task={activeTask}
+              onClick={() => {}}
+              onStatusChange={() => {}}
+              isDragging
+            />
+          )}
+        </DragOverlay>
+
+        <TaskDrawer
+          open={isDrawerOpen}
+          onOpenChange={setIsDrawerOpen}
+          task={selectedTask}
+          projectId={projectId}
+          onTaskUpdate={handleTaskUpdate}
+        />
+
+        {user?.id === 'demo-user-id' && tasks.length > 0 && (
+          <div className="text-center py-4 px-4 bg-orange-50 dark:bg-orange-950/50 rounded-lg border border-orange-200 dark:border-orange-800">
+            <p className="text-sm text-orange-700 dark:text-orange-300">
+              Demo tasks shown. Drag tasks between columns to change status. Sign up to create and manage real project tasks!
+            </p>
+          </div>
+        )}
+      </div>
+    </DndContext>
   );
 }
