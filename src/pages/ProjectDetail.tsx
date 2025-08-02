@@ -34,6 +34,13 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [phaseProgress, setPhaseProgress] = useState<Record<string, number>>({});
+  const [phaseStatus, setPhaseStatus] = useState<Record<string, string>>({
+    'pre-production': 'not-started',
+    'recording': 'not-started',
+    'editing': 'not-started',
+    'mixing': 'not-started',
+    'mastering': 'not-started'
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
     bpm: '',
@@ -277,11 +284,63 @@ export default function ProjectDetail() {
     setPhaseProgress(newPhaseProgress);
   };
 
-  const getPhaseStatus = (phase: string, progressValue: number) => {
-    if (progressValue === 100) return { text: '✓ Complete', class: 'text-green-600 font-medium' };
-    if (progressValue > 0) return { text: '⏸ In Progress', class: 'text-blue-600 font-medium' };
-    return { text: '⏳ Pending', class: 'text-muted-foreground' };
+  const handlePhaseStatusChange = (phase: string, status: string) => {
+    setPhaseStatus(prev => ({ ...prev, [phase]: status }));
+    
+    // Save to localStorage for demo mode
+    if (user?.id === 'demo-user-id' && id) {
+      const storageKey = `project-${id}-phase-status`;
+      const updatedStatus = { ...phaseStatus, [phase]: status };
+      localStorage.setItem(storageKey, JSON.stringify(updatedStatus));
+    }
+    
+    // Calculate overall progress based on completed phases
+    const totalPhases = Object.keys(phaseStatus).length;
+    const completedPhases = Object.values({ ...phaseStatus, [phase]: status }).filter(s => s === 'complete').length;
+    const newProgress = Math.round((completedPhases / totalPhases) * 100);
+    setProgress(newProgress);
   };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'complete':
+        return { text: '✓ Complete', class: 'text-green-600 font-medium' };
+      case 'pending':
+        return { text: '⏸ Pending', class: 'text-blue-600 font-medium' };
+      case 'not-started':
+        return { text: '⏳ Not Started', class: 'text-muted-foreground' };
+      default:
+        return { text: '⏳ Not Started', class: 'text-muted-foreground' };
+    }
+  };
+
+  const getStatusOptions = () => [
+    { value: 'not-started', label: 'Not Started' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'complete', label: 'Complete' }
+  ];
+
+  // Load phase status from localStorage on component mount
+  useEffect(() => {
+    if (user?.id === 'demo-user-id' && id) {
+      const storageKey = `project-${id}-phase-status`;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const parsedStatus = JSON.parse(stored);
+          setPhaseStatus(parsedStatus);
+          
+          // Calculate progress from stored status
+          const totalPhases = Object.keys(parsedStatus).length;
+          const completedPhases = Object.values(parsedStatus).filter((s: any) => s === 'complete').length;
+          const storedProgress = Math.round((completedPhases / totalPhases) * 100);
+          setProgress(storedProgress);
+        } catch (error) {
+          console.error('Error parsing stored phase status:', error);
+        }
+      }
+    }
+  }, [user?.id, id]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -497,50 +556,28 @@ export default function ProjectDetail() {
                   </div>
                   
                   <div className="space-y-3 pt-4">
-                    <div className="flex justify-between items-center text-sm">
-                      <span>Pre-production</span>
-                      <div className="flex items-center gap-2">
-                        <span className={getPhaseStatus('pre-production', phaseProgress['pre-production'] || 0).class}>
-                          {getPhaseStatus('pre-production', phaseProgress['pre-production'] || 0).text}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {phaseProgress['pre-production'] || 0}%
-                        </span>
+                    {['pre-production', 'recording', 'editing', 'mixing', 'mastering'].map((phase) => (
+                      <div key={phase} className="flex justify-between items-center text-sm">
+                        <span className="capitalize">{phase.replace('-', '-')}</span>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={phaseStatus[phase]}
+                            onValueChange={(value) => handlePhaseStatusChange(phase, value)}
+                          >
+                            <SelectTrigger className="w-32 h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getStatusOptions().map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span>Recording</span>
-                      <div className="flex items-center gap-2">
-                        <span className={getPhaseStatus('recording', phaseProgress['recording'] || 0).class}>
-                          {getPhaseStatus('recording', phaseProgress['recording'] || 0).text}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {phaseProgress['recording'] || 0}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span>Mixing</span>
-                      <div className="flex items-center gap-2">
-                        <span className={getPhaseStatus('mixing', phaseProgress['mixing'] || 0).class}>
-                          {getPhaseStatus('mixing', phaseProgress['mixing'] || 0).text}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {phaseProgress['mixing'] || 0}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span>Mastering</span>
-                      <div className="flex items-center gap-2">
-                        <span className={getPhaseStatus('mastering', phaseProgress['mastering'] || 0).class}>
-                          {getPhaseStatus('mastering', phaseProgress['mastering'] || 0).text}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {phaseProgress['mastering'] || 0}%
-                        </span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </CardContent>
