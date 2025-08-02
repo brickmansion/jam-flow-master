@@ -104,11 +104,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const demoSignIn = async () => {
-    const { error } = await supabase.auth.signInWithPassword({
+    // Create a mock user session for demo mode
+    const mockUser = {
+      id: 'demo-user-id',
       email: 'demo@sessioncheck.com',
-      password: 'demo123456',
+      user_metadata: { role: 'producer' },
+      created_at: new Date().toISOString(),
+      app_metadata: {},
+      aud: 'authenticated',
+      confirmed_at: new Date().toISOString(),
+      email_confirmed_at: new Date().toISOString(),
+      last_sign_in_at: new Date().toISOString(),
+      phone: '',
+      updated_at: new Date().toISOString()
+    } as any;
+
+    const mockSession = {
+      access_token: 'demo-token',
+      refresh_token: 'demo-refresh',
+      expires_in: 3600,
+      token_type: 'bearer',
+      user: mockUser
+    } as any;
+
+    // Set demo state directly
+    setUser(mockUser);
+    setSession(mockSession);
+    setProfile({
+      id: 'demo-user-id',
+      role: 'producer',
+      display_name: 'Demo User'
     });
-    return { error };
+
+    return { error: null };
   };
 
   const signOut = async () => {

@@ -24,6 +24,9 @@ export function Navbar({ title = 'SessionCheck', isDemoMode = false }: NavbarPro
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  
+  // Check if user is in demo mode
+  const isDemo = user?.id === 'demo-user-id' || isDemoMode;
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,7 +61,7 @@ export function Navbar({ title = 'SessionCheck', isDemoMode = false }: NavbarPro
           </Link>
 
           {/* Demo Mode Badge */}
-          {isDemoMode && (
+          {isDemo && (
             <Badge variant="secondary" className="ml-4 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
               Demo Mode
             </Badge>
@@ -120,7 +123,7 @@ export function Navbar({ title = 'SessionCheck', isDemoMode = false }: NavbarPro
               </>
             )}
 
-            {isDemoMode && (
+            {isDemo && (
               <Button 
                 asChild 
                 className="bg-primary hover:bg-primary/90"

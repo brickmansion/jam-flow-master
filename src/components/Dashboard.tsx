@@ -37,8 +37,45 @@ export default function Dashboard() {
 
   const fetchProjects = async () => {
     try {
-      // For now, return empty array until database is ready
-      setProjects([]);
+      // Check if we're in demo mode
+      if (user?.id === 'demo-user-id') {
+        // Return demo projects
+        setProjects([
+          {
+            id: 'demo-project-1',
+            title: 'Summer Vibes',
+            artist: 'The Waves',
+            due_date: '2025-08-15',
+            bpm: 128,
+            sample_rate: 48000,
+            producer_id: 'demo-user-id',
+            created_at: '2025-01-01T00:00:00Z'
+          },
+          {
+            id: 'demo-project-2',
+            title: 'Midnight Sessions',
+            artist: 'Luna Eclipse',
+            due_date: '2025-08-20',
+            bpm: 110,
+            sample_rate: 44100,
+            producer_id: 'demo-user-id',
+            created_at: '2025-01-02T00:00:00Z'
+          },
+          {
+            id: 'demo-project-3',
+            title: 'Electric Dreams',
+            artist: 'Synth City',
+            due_date: null,
+            bpm: 140,
+            sample_rate: 48000,
+            producer_id: 'demo-user-id',
+            created_at: '2025-01-03T00:00:00Z'
+          }
+        ]);
+      } else {
+        // For real users, return empty array until database is ready
+        setProjects([]);
+      }
     } catch (error) {
       toast({
         title: "Error loading projects",
@@ -215,8 +252,18 @@ function ProjectProgress({ projectId }: { projectId: string }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // For now, set random progress until database is ready
-    setProgress(Math.floor(Math.random() * 100));
+    // Set demo progress for demo projects
+    if (projectId.startsWith('demo-')) {
+      const demoProgress = {
+        'demo-project-1': 75,
+        'demo-project-2': 45,
+        'demo-project-3': 20
+      };
+      setProgress(demoProgress[projectId as keyof typeof demoProgress] || 0);
+    } else {
+      // For real projects, set random progress until database is ready
+      setProgress(Math.floor(Math.random() * 100));
+    }
   }, [projectId]);
 
   return (
