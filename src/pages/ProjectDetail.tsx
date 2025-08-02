@@ -270,6 +270,8 @@ export default function ProjectDetail() {
     );
   }
 
+  const daysUntilDue = getDaysUntilDue(project.due_date);
+
   const handleProgressChange = (newProgress: number, newPhaseProgress: Record<string, number>) => {
     setProgress(newProgress);
     setPhaseProgress(newPhaseProgress);
@@ -280,8 +282,6 @@ export default function ProjectDetail() {
     if (progressValue > 0) return { text: '⏸ In Progress', class: 'text-blue-600 font-medium' };
     return { text: '⏳ Pending', class: 'text-muted-foreground' };
   };
-
-  const daysUntilDue = getDaysUntilDue(project.due_date);
 
   return (
     <div className="min-h-screen bg-background">
