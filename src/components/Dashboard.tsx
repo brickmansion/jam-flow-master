@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Calendar, Clock, TrendingUp } from 'lucide-react';
+import { Plus, Calendar, Clock, TrendingUp, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ interface Project {
   due_date: string | null;
   bpm: number;
   sample_rate: number;
+  song_key: string;
   producer_id: string;
   created_at: string;
 }
@@ -48,6 +49,7 @@ export default function Dashboard() {
             due_date: '2025-08-15',
             bpm: 128,
             sample_rate: 48000,
+            song_key: 'G major',
             producer_id: 'demo-user-id',
             created_at: '2025-01-01T00:00:00Z'
           },
@@ -58,6 +60,7 @@ export default function Dashboard() {
             due_date: '2025-08-20',
             bpm: 110,
             sample_rate: 44100,
+            song_key: 'A minor',
             producer_id: 'demo-user-id',
             created_at: '2025-01-02T00:00:00Z'
           },
@@ -68,6 +71,7 @@ export default function Dashboard() {
             due_date: null,
             bpm: 140,
             sample_rate: 48000,
+            song_key: 'E minor',
             producer_id: 'demo-user-id',
             created_at: '2025-01-03T00:00:00Z'
           }
@@ -219,6 +223,10 @@ export default function Dashboard() {
                         <div className="flex items-center gap-1">
                           <TrendingUp className="h-3 w-3" />
                           {project.sample_rate / 1000}kHz
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Music className="h-3 w-3" />
+                          {project.song_key}
                         </div>
                       </div>
                       

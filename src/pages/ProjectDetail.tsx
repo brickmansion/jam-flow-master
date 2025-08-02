@@ -18,6 +18,7 @@ interface Project {
   due_date: string | null;
   bpm: number;
   sample_rate: number;
+  song_key: string;
   producer_id: string;
   created_at: string;
 }
@@ -33,7 +34,8 @@ export default function ProjectDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
     bpm: '',
-    sample_rate: ''
+    sample_rate: '',
+    song_key: ''
   });
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function ProjectDetail() {
             due_date: '2025-08-15',
             bpm: 128,
             sample_rate: 48000,
+            song_key: 'G major',
             producer_id: 'demo-user-id',
             created_at: '2025-01-01T00:00:00Z'
           },
@@ -64,6 +67,7 @@ export default function ProjectDetail() {
             due_date: '2025-08-20',
             bpm: 110,
             sample_rate: 44100,
+            song_key: 'A minor',
             producer_id: 'demo-user-id',
             created_at: '2025-01-02T00:00:00Z'
           },
@@ -74,6 +78,7 @@ export default function ProjectDetail() {
             due_date: null,
             bpm: 140,
             sample_rate: 48000,
+            song_key: 'E minor',
             producer_id: 'demo-user-id',
             created_at: '2025-01-03T00:00:00Z'
           }
@@ -117,7 +122,8 @@ export default function ProjectDetail() {
     if (project) {
       setEditValues({
         bpm: project.bpm.toString(),
-        sample_rate: project.sample_rate.toString()
+        sample_rate: project.sample_rate.toString(),
+        song_key: project.song_key
       });
       setIsEditing(true);
     }
@@ -125,7 +131,7 @@ export default function ProjectDetail() {
 
   const cancelEditing = () => {
     setIsEditing(false);
-    setEditValues({ bpm: '', sample_rate: '' });
+    setEditValues({ bpm: '', sample_rate: '', song_key: '' });
   };
 
   const saveChanges = async () => {
@@ -158,14 +164,15 @@ export default function ProjectDetail() {
       const updatedProject = {
         ...project,
         bpm,
-        sample_rate: sampleRate
+        sample_rate: sampleRate,
+        song_key: editValues.song_key
       };
       setProject(updatedProject);
       setIsEditing(false);
 
       toast({
         title: "Project updated",
-        description: "BPM and sample rate have been updated successfully."
+        description: "Project details have been updated successfully."
       });
 
       // For real projects, add database update logic here
@@ -251,7 +258,17 @@ export default function ProjectDetail() {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight mb-2">{project.title}</h1>
-              <p className="text-xl text-muted-foreground">{project.artist}</p>
+              <p className="text-xl text-muted-foreground mb-1">{project.artist}</p>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {project.bpm} BPM
+                </div>
+                <div className="flex items-center gap-1">
+                  <Music className="h-3 w-3" />
+                  {project.song_key}
+                </div>
+              </div>
             </div>
             
             {project.due_date && (
@@ -307,7 +324,7 @@ export default function ProjectDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">BPM</p>
                     {isEditing ? (
@@ -343,6 +360,47 @@ export default function ProjectDetail() {
                       </Select>
                     ) : (
                       <p className="text-2xl font-bold">{project.sample_rate / 1000}kHz</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Song Key</p>
+                    {isEditing ? (
+                      <Select
+                        value={editValues.song_key}
+                        onValueChange={(value) => setEditValues(prev => ({ ...prev, song_key: value }))}
+                      >
+                        <SelectTrigger className="text-2xl font-bold h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px] overflow-y-auto">
+                          <SelectItem value="C major">C major</SelectItem>
+                          <SelectItem value="C minor">C minor</SelectItem>
+                          <SelectItem value="C♯ major">C♯ major</SelectItem>
+                          <SelectItem value="C♯ minor">C♯ minor</SelectItem>
+                          <SelectItem value="D major">D major</SelectItem>
+                          <SelectItem value="D minor">D minor</SelectItem>
+                          <SelectItem value="E♭ major">E♭ major</SelectItem>
+                          <SelectItem value="E♭ minor">E♭ minor</SelectItem>
+                          <SelectItem value="E major">E major</SelectItem>
+                          <SelectItem value="E minor">E minor</SelectItem>
+                          <SelectItem value="F major">F major</SelectItem>
+                          <SelectItem value="F minor">F minor</SelectItem>
+                          <SelectItem value="F♯ major">F♯ major</SelectItem>
+                          <SelectItem value="F♯ minor">F♯ minor</SelectItem>
+                          <SelectItem value="G major">G major</SelectItem>
+                          <SelectItem value="G minor">G minor</SelectItem>
+                          <SelectItem value="A♭ major">A♭ major</SelectItem>
+                          <SelectItem value="A♭ minor">A♭ minor</SelectItem>
+                          <SelectItem value="A major">A major</SelectItem>
+                          <SelectItem value="A minor">A minor</SelectItem>
+                          <SelectItem value="B♭ major">B♭ major</SelectItem>
+                          <SelectItem value="B♭ minor">B♭ minor</SelectItem>
+                          <SelectItem value="B major">B major</SelectItem>
+                          <SelectItem value="B minor">B minor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-2xl font-bold">{project.song_key}</p>
                     )}
                   </div>
                   {project.due_date && (

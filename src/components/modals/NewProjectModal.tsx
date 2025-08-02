@@ -28,6 +28,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
     title: '',
     artist: '',
     bpm: '',
+    song_key: 'C major',
     sample_rate: '48000'
   });
 
@@ -74,7 +75,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
       onOpenChange(false);
       
       // Reset form
-      setFormData({ title: '', artist: '', bpm: '', sample_rate: '48000' });
+      setFormData({ title: '', artist: '', bpm: '', song_key: 'C major', sample_rate: '48000' });
       setDueDate(undefined);
     } catch (error: any) {
       toast({
@@ -152,6 +153,44 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="song_key">Song Key *</Label>
+            <Select
+              value={formData.song_key}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, song_key: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px] overflow-y-auto">
+                <SelectItem value="C major">C major</SelectItem>
+                <SelectItem value="C minor">C minor</SelectItem>
+                <SelectItem value="C♯ major">C♯ major</SelectItem>
+                <SelectItem value="C♯ minor">C♯ minor</SelectItem>
+                <SelectItem value="D major">D major</SelectItem>
+                <SelectItem value="D minor">D minor</SelectItem>
+                <SelectItem value="E♭ major">E♭ major</SelectItem>
+                <SelectItem value="E♭ minor">E♭ minor</SelectItem>
+                <SelectItem value="E major">E major</SelectItem>
+                <SelectItem value="E minor">E minor</SelectItem>
+                <SelectItem value="F major">F major</SelectItem>
+                <SelectItem value="F minor">F minor</SelectItem>
+                <SelectItem value="F♯ major">F♯ major</SelectItem>
+                <SelectItem value="F♯ minor">F♯ minor</SelectItem>
+                <SelectItem value="G major">G major</SelectItem>
+                <SelectItem value="G minor">G minor</SelectItem>
+                <SelectItem value="A♭ major">A♭ major</SelectItem>
+                <SelectItem value="A♭ minor">A♭ minor</SelectItem>
+                <SelectItem value="A major">A major</SelectItem>
+                <SelectItem value="A minor">A minor</SelectItem>
+                <SelectItem value="B♭ major">B♭ major</SelectItem>
+                <SelectItem value="B♭ minor">B♭ minor</SelectItem>
+                <SelectItem value="B major">B major</SelectItem>
+                <SelectItem value="B minor">B minor</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
