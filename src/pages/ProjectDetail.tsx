@@ -30,8 +30,25 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // All hooks must be called at the top level, in the same order every time
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [phaseProgress, setPhaseProgress] = useState<Record<string, number>>({});
+  const [phaseStatus, setPhaseStatus] = useState<Record<string, string>>({
+    'pre-production': 'not-started',
+    'recording': 'not-started',
+    'editing': 'not-started',
+    'mixing': 'not-started',
+    'mastering': 'not-started'
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({
+    bpm: '',
+    sample_rate: '',
+    song_key: ''
+  });
 
   const fetchProject = async (projectId: string) => {
     try {
@@ -159,6 +176,28 @@ export default function ProjectDetail() {
     }
   }, [id]);
 
+  // Load phase status from localStorage on component mount  
+  useEffect(() => {
+    if (user?.id === 'demo-user-id' && id) {
+      const storageKey = `project-${id}-phase-status`;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const parsedStatus = JSON.parse(stored);
+          setPhaseStatus(parsedStatus);
+          
+          // Calculate progress from stored status
+          const totalPhases = Object.keys(parsedStatus).length;
+          const completedPhases = Object.values(parsedStatus).filter((s: any) => s === 'complete').length;
+          const storedProgress = Math.round((completedPhases / totalPhases) * 100);
+          setProgress(storedProgress);
+        } catch (error) {
+          console.error('Error parsing stored phase status:', error);
+        }
+      }
+    }
+  }, [user?.id, id]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -193,23 +232,6 @@ export default function ProjectDetail() {
       </div>
     );
   }
-
-  // All hooks must be called after early returns to avoid hooks order issues
-  const [progress, setProgress] = useState(0);
-  const [phaseProgress, setPhaseProgress] = useState<Record<string, number>>({});
-  const [phaseStatus, setPhaseStatus] = useState<Record<string, string>>({
-    'pre-production': 'not-started',
-    'recording': 'not-started',
-    'editing': 'not-started',
-    'mixing': 'not-started',
-    'mastering': 'not-started'
-  });
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValues, setEditValues] = useState({
-    bpm: '',
-    sample_rate: '',
-    song_key: ''
-  });
 
   const daysUntilDue = getDaysUntilDue(project.due_date);
 
@@ -322,27 +344,6 @@ export default function ProjectDetail() {
     }
   };
 
-  // Load phase status from localStorage on component mount
-  useEffect(() => {
-    if (user?.id === 'demo-user-id' && id) {
-      const storageKey = `project-${id}-phase-status`;
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        try {
-          const parsedStatus = JSON.parse(stored);
-          setPhaseStatus(parsedStatus);
-          
-          // Calculate progress from stored status
-          const totalPhases = Object.keys(parsedStatus).length;
-          const completedPhases = Object.values(parsedStatus).filter((s: any) => s === 'complete').length;
-          const storedProgress = Math.round((completedPhases / totalPhases) * 100);
-          setProgress(storedProgress);
-        } catch (error) {
-          console.error('Error parsing stored phase status:', error);
-        }
-      }
-    }
-  }, [user?.id, id, project]);
 
   return (
     <div className="min-h-screen bg-background">
