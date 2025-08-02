@@ -153,7 +153,10 @@ export default function Dashboard() {
           </div>
           
           {profile?.role === 'producer' && (
-            <Button onClick={() => setShowNewProjectModal(true)}>
+            <Button onClick={() => {
+              console.log('New Project button clicked');
+              setShowNewProjectModal(true);
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>

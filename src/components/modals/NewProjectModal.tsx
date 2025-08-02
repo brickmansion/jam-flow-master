@@ -34,7 +34,11 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    console.log('Form submitted', formData);
+    if (!user) {
+      console.log('No user found');
+      return;
+    }
 
     setIsLoading(true);
 
@@ -43,12 +47,13 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
       const sampleRate = parseInt(formData.sample_rate);
 
       // Validation
-      if (bpm < 40 || bpm > 300) {
+      if (!formData.bpm || isNaN(bpm) || bpm < 40 || bpm > 300) {
         toast({
           title: "Invalid BPM",
           description: "BPM must be between 40 and 300",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
 
@@ -58,6 +63,18 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
           description: "Sample rate must be 44.1kHz, 48kHz, 88.2kHz, or 96kHz",
           variant: "destructive"
         });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check required fields
+      if (!formData.title.trim() || !formData.artist.trim()) {
+        toast({
+          title: "Missing required fields",
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        setIsLoading(false);
         return;
       }
 
