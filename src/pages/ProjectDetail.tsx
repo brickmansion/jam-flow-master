@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, TrendingUp, Music, Edit2, Check, X } from 'lucide-react';
+import { TaskBoard } from '@/components/tasks/TaskBoard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -444,19 +445,8 @@ export default function ProjectDetail() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Project Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Task management features will be available soon.</p>
-                  <p className="text-sm mt-2">
-                    {user?.id === 'demo-user-id' ? 
-                      'Sign up to start managing real project tasks!' :
-                      'Database integration coming soon.'
-                    }
-                  </p>
-                </div>
+              <CardContent className="p-6">
+                <TaskBoard projectId={id!} />
               </CardContent>
             </Card>
           </div>

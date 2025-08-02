@@ -108,10 +108,10 @@ export default function Landing() {
             <Card>
               <CardContent className="p-6">
                 <Shield className="mb-4 h-8 w-8 text-primary" />
-                <h3 className="mb-2 text-xl font-semibold">Secure File Storage</h3>
+                <h3 className="mb-2 text-xl font-semibold">External Link Integration</h3>
                 <p className="text-muted-foreground">
-                  Upload and organize project files, stems, and references
-                  with enterprise-grade security.
+                  Connect your WeTransfer, Dropbox, and other external links
+                  directly to your project tasks.
                 </p>
               </CardContent>
             </Card>
