@@ -80,24 +80,62 @@ export default function Dashboard() {
   };
 
   // Function to add a new project (for both demo and real users)
-  const addProject = (projectData: Omit<Project, 'id' | 'created_at' | 'producer_id'>) => {
-    const newProject: Project = {
-      ...projectData,
-      id: user?.id === 'demo-user-id' ? `demo-project-${Date.now()}` : `project-${Date.now()}`,
-      producer_id: user?.id || '',
-      created_at: new Date().toISOString()
-    };
-
+  const addProject = async (projectData: Omit<Project, 'id' | 'created_at' | 'producer_id'>) => {
     if (user?.id === 'demo-user-id') {
       // For demo users, add to localStorage
+      const newProject: Project = {
+        ...projectData,
+        id: `demo-project-${Date.now()}`,
+        producer_id: user.id,
+        created_at: new Date().toISOString()
+      };
+      
       const currentProjects = getDemoProjects();
       const updatedProjects = [...currentProjects, newProject];
       saveDemoProjects(updatedProjects);
       setProjects(updatedProjects);
     } else {
-      // For real users, add to database (to be implemented)
-      // For now, just add to state
-      setProjects(prev => [...prev, newProject]);
+      // For real users, save to database
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .insert({
+            title: projectData.title,
+            artist: projectData.artist,
+            due_date: projectData.due_date,
+            bpm: projectData.bpm,
+            sample_rate: projectData.sample_rate,
+            song_key: projectData.song_key as any,
+            producer_id: user?.id
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating project:', error);
+          toast({
+            title: "Error creating project",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Add to local state
+        setProjects(prev => [...prev, data]);
+        
+        toast({
+          title: "Project created",
+          description: "Your project has been created successfully.",
+        });
+      } catch (error) {
+        console.error('Error creating project:', error);
+        toast({
+          title: "Error creating project",
+          description: "Could not create project. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -119,8 +157,23 @@ export default function Dashboard() {
           saveDemoProjects(demoProjects);
         }
       } else {
-        // For real users, return empty array until database is ready
-        setProjects([]);
+        // For real users, fetch from database
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching projects:', error);
+          toast({
+            title: "Error loading projects",
+            description: error.message,
+            variant: "destructive"
+          });
+          setProjects([]);
+        } else {
+          setProjects(data || []);
+        }
       }
     } catch (error) {
       toast({
@@ -292,9 +345,8 @@ export default function Dashboard() {
       <NewProjectModal 
         open={showNewProjectModal}
         onOpenChange={setShowNewProjectModal}
-        onProjectCreated={(projectData) => {
-          addProject(projectData);
-          fetchProjects(); // Refresh the list
+        onProjectCreated={async (projectData) => {
+          await addProject(projectData);
         }}
       />
     </div>
