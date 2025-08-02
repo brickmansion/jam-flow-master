@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Project {
   id: string;
@@ -115,13 +116,26 @@ export default function ProjectDetail() {
           navigate('/dashboard');
         }
       } else {
-        // For real projects, fetch from database (not implemented yet)
-        toast({
-          title: "Project not found",
-          description: "This project doesn't exist or you don't have access to it.",
-          variant: "destructive"
-        });
-        navigate('/dashboard');
+        // For real projects, fetch from database
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', projectId)
+          .single();
+
+        if (error) {
+          console.error('Error fetching project:', error);
+          toast({
+            title: "Project not found",
+            description: "This project doesn't exist or you don't have access to it.",
+            variant: "destructive"
+          });
+          navigate('/dashboard');
+        } else {
+          setProject(data);
+          // Set random progress for real projects until task system is integrated
+          setProgress(Math.floor(Math.random() * 100));
+        }
       }
     } catch (error) {
       toast({
