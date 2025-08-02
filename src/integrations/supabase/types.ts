@@ -144,7 +144,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_project_member: {
+        Args: { project_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       song_key:
