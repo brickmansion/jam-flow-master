@@ -32,27 +32,6 @@ export default function ProjectDetail() {
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [phaseProgress, setPhaseProgress] = useState<Record<string, number>>({});
-  const [phaseStatus, setPhaseStatus] = useState<Record<string, string>>({
-    'pre-production': 'not-started',
-    'recording': 'not-started',
-    'editing': 'not-started',
-    'mixing': 'not-started',
-    'mastering': 'not-started'
-  });
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValues, setEditValues] = useState({
-    bpm: '',
-    sample_rate: '',
-    song_key: ''
-  });
-
-  useEffect(() => {
-    if (id) {
-      fetchProject(id);
-    }
-  }, [id]);
 
   const fetchProject = async (projectId: string) => {
     try {
@@ -157,6 +136,124 @@ export default function ProjectDetail() {
     }
   };
 
+  const getDaysUntilDue = (dueDate: string | null) => {
+    if (!dueDate) return null;
+    const due = new Date(dueDate);
+    const now = new Date();
+    const diffTime = due.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getDueBadgeVariant = (days: number | null) => {
+    if (days === null) return 'secondary';
+    if (days < 0) return 'destructive';
+    if (days <= 3) return 'destructive';
+    if (days <= 7) return 'default';
+    return 'secondary';
+  };
+
+  useEffect(() => {
+    if (id) {
+      fetchProject(id);
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar title="Project Details" />
+        <div className="p-6">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-muted rounded w-1/4"></div>
+            <div className="h-32 bg-muted rounded"></div>
+            <div className="h-64 bg-muted rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar title="Project Not Found" />
+        <div className="p-6">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-4">Project Not Found</h2>
+            <p className="text-muted-foreground mb-6">
+              The project you're looking for doesn't exist or you don't have access to it.
+            </p>
+            <Button onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // All hooks must be called after early returns to avoid hooks order issues
+  const [progress, setProgress] = useState(0);
+  const [phaseProgress, setPhaseProgress] = useState<Record<string, number>>({});
+  const [phaseStatus, setPhaseStatus] = useState<Record<string, string>>({
+    'pre-production': 'not-started',
+    'recording': 'not-started',
+    'editing': 'not-started',
+    'mixing': 'not-started',
+    'mastering': 'not-started'
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({
+    bpm: '',
+    sample_rate: '',
+    song_key: ''
+  });
+
+  const daysUntilDue = getDaysUntilDue(project.due_date);
+
+  const handleProgressChange = (newProgress: number, newPhaseProgress: Record<string, number>) => {
+    setProgress(newProgress);
+    setPhaseProgress(newPhaseProgress);
+  };
+
+  const handlePhaseStatusChange = (phase: string, status: string) => {
+    setPhaseStatus(prev => ({ ...prev, [phase]: status }));
+    
+    // Save to localStorage for demo mode
+    if (user?.id === 'demo-user-id' && id) {
+      const storageKey = `project-${id}-phase-status`;
+      const updatedStatus = { ...phaseStatus, [phase]: status };
+      localStorage.setItem(storageKey, JSON.stringify(updatedStatus));
+    }
+    
+    // Calculate overall progress based on completed phases
+    const totalPhases = Object.keys(phaseStatus).length;
+    const completedPhases = Object.values({ ...phaseStatus, [phase]: status }).filter(s => s === 'complete').length;
+    const newProgress = Math.round((completedPhases / totalPhases) * 100);
+    setProgress(newProgress);
+  };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'complete':
+        return { text: '✓ Complete', class: 'text-green-600 font-medium' };
+      case 'pending':
+        return { text: '⏸ Pending', class: 'text-blue-600 font-medium' };
+      case 'not-started':
+        return { text: '⏳ Not Started', class: 'text-muted-foreground' };
+      default:
+        return { text: '⏳ Not Started', class: 'text-muted-foreground' };
+    }
+  };
+
+  const getStatusOptions = () => [
+    { value: 'not-started', label: 'Not Started' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'complete', label: 'Complete' }
+  ];
+
   const startEditing = () => {
     if (project) {
       setEditValues({
@@ -224,101 +321,6 @@ export default function ProjectDetail() {
       });
     }
   };
-
-  const getDaysUntilDue = (dueDate: string | null) => {
-    if (!dueDate) return null;
-    const due = new Date(dueDate);
-    const now = new Date();
-    const diffTime = due.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getDueBadgeVariant = (days: number | null) => {
-    if (days === null) return 'secondary';
-    if (days < 0) return 'destructive';
-    if (days <= 3) return 'destructive';
-    if (days <= 7) return 'default';
-    return 'secondary';
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar title="Project Details" />
-        <div className="p-6">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-1/4"></div>
-            <div className="h-32 bg-muted rounded"></div>
-            <div className="h-64 bg-muted rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!project) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar title="Project Not Found" />
-        <div className="p-6">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Project Not Found</h2>
-            <p className="text-muted-foreground mb-6">
-              The project you're looking for doesn't exist or you don't have access to it.
-            </p>
-            <Button onClick={() => navigate('/dashboard')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const daysUntilDue = getDaysUntilDue(project.due_date);
-
-  const handleProgressChange = (newProgress: number, newPhaseProgress: Record<string, number>) => {
-    setProgress(newProgress);
-    setPhaseProgress(newPhaseProgress);
-  };
-
-  const handlePhaseStatusChange = (phase: string, status: string) => {
-    setPhaseStatus(prev => ({ ...prev, [phase]: status }));
-    
-    // Save to localStorage for demo mode
-    if (user?.id === 'demo-user-id' && id) {
-      const storageKey = `project-${id}-phase-status`;
-      const updatedStatus = { ...phaseStatus, [phase]: status };
-      localStorage.setItem(storageKey, JSON.stringify(updatedStatus));
-    }
-    
-    // Calculate overall progress based on completed phases
-    const totalPhases = Object.keys(phaseStatus).length;
-    const completedPhases = Object.values({ ...phaseStatus, [phase]: status }).filter(s => s === 'complete').length;
-    const newProgress = Math.round((completedPhases / totalPhases) * 100);
-    setProgress(newProgress);
-  };
-
-  const getStatusDisplay = (status: string) => {
-    switch (status) {
-      case 'complete':
-        return { text: '✓ Complete', class: 'text-green-600 font-medium' };
-      case 'pending':
-        return { text: '⏸ Pending', class: 'text-blue-600 font-medium' };
-      case 'not-started':
-        return { text: '⏳ Not Started', class: 'text-muted-foreground' };
-      default:
-        return { text: '⏳ Not Started', class: 'text-muted-foreground' };
-    }
-  };
-
-  const getStatusOptions = () => [
-    { value: 'not-started', label: 'Not Started' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'complete', label: 'Complete' }
-  ];
 
   // Load phase status from localStorage on component mount
   useEffect(() => {
