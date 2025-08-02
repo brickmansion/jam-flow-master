@@ -48,41 +48,55 @@ export default function ProjectDetail() {
     try {
       // Check if we're in demo mode and this is a demo project
       if (user?.id === 'demo-user-id' && projectId.startsWith('demo-')) {
-        const demoProjects = {
-          'demo-project-1': {
-            id: 'demo-project-1',
-            title: 'Summer Vibes',
-            artist: 'The Waves',
-            due_date: '2025-08-15',
-            bpm: 128,
-            sample_rate: 48000,
-            song_key: 'G major',
-            producer_id: 'demo-user-id',
-            created_at: '2025-01-01T00:00:00Z'
-          },
-          'demo-project-2': {
-            id: 'demo-project-2',
-            title: 'Midnight Sessions',
-            artist: 'Luna Eclipse',
-            due_date: '2025-08-20',
-            bpm: 110,
-            sample_rate: 44100,
-            song_key: 'A minor',
-            producer_id: 'demo-user-id',
-            created_at: '2025-01-02T00:00:00Z'
-          },
-          'demo-project-3': {
-            id: 'demo-project-3',
-            title: 'Electric Dreams',
-            artist: 'Synth City',
-            due_date: null,
-            bpm: 140,
-            sample_rate: 48000,
-            song_key: 'E minor',
-            producer_id: 'demo-user-id',
-            created_at: '2025-01-03T00:00:00Z'
-          }
-        };
+        // Get all demo projects from localStorage
+        const stored = localStorage.getItem('demo-projects');
+        let demoProjects: any = {};
+        
+        if (stored) {
+          // Convert array to object for lookup
+          const projectsArray = JSON.parse(stored);
+          demoProjects = projectsArray.reduce((acc: any, project: any) => {
+            acc[project.id] = project;
+            return acc;
+          }, {});
+        } else {
+          // Fallback to hardcoded demo projects
+          demoProjects = {
+            'demo-project-1': {
+              id: 'demo-project-1',
+              title: 'Summer Vibes',
+              artist: 'The Waves',
+              due_date: '2025-08-15',
+              bpm: 128,
+              sample_rate: 48000,
+              song_key: 'G major',
+              producer_id: 'demo-user-id',
+              created_at: '2025-01-01T00:00:00Z'
+            },
+            'demo-project-2': {
+              id: 'demo-project-2',
+              title: 'Midnight Sessions',
+              artist: 'Luna Eclipse',
+              due_date: '2025-08-20',
+              bpm: 110,
+              sample_rate: 44100,
+              song_key: 'A minor',
+              producer_id: 'demo-user-id',
+              created_at: '2025-01-02T00:00:00Z'
+            },
+            'demo-project-3': {
+              id: 'demo-project-3',
+              title: 'Electric Dreams',
+              artist: 'Synth City',
+              due_date: null,
+              bpm: 140,
+              sample_rate: 48000,
+              song_key: 'E minor',
+              producer_id: 'demo-user-id',
+              created_at: '2025-01-03T00:00:00Z'
+            }
+          };
+        }
 
         const demoProgress = {
           'demo-project-1': 75,
@@ -90,10 +104,12 @@ export default function ProjectDetail() {
           'demo-project-3': 20
         };
 
-        const projectData = demoProjects[projectId as keyof typeof demoProjects];
+        const projectData = demoProjects[projectId];
         if (projectData) {
           setProject(projectData);
-          setProgress(demoProgress[projectId as keyof typeof demoProgress] || 0);
+          // Set progress for known projects, default to random for new ones
+          const knownProgress = demoProgress[projectId as keyof typeof demoProgress];
+          setProgress(knownProgress || Math.floor(Math.random() * 100));
         } else {
           navigate('/dashboard');
         }
