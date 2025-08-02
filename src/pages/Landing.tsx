@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Music, CheckSquare, Users, Clock, Zap, Shield } from 'lucide-react';
@@ -13,7 +13,7 @@ export default function Landing() {
   };
 
   if (user) {
-    return <div>Redirecting to dashboard...</div>;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
