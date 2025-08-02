@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, TrendingUp, Music } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, TrendingUp, Music, Edit2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -28,6 +30,11 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({
+    bpm: '',
+    sample_rate: ''
+  });
 
   useEffect(() => {
     if (id) {
@@ -103,6 +110,72 @@ export default function ProjectDetail() {
       navigate('/dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEditing = () => {
+    if (project) {
+      setEditValues({
+        bpm: project.bpm.toString(),
+        sample_rate: project.sample_rate.toString()
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditValues({ bpm: '', sample_rate: '' });
+  };
+
+  const saveChanges = async () => {
+    if (!project) return;
+
+    const bpm = parseInt(editValues.bpm);
+    const sampleRate = parseInt(editValues.sample_rate);
+
+    // Validation
+    if (isNaN(bpm) || bpm < 40 || bpm > 300) {
+      toast({
+        title: "Invalid BPM",
+        description: "BPM must be between 40 and 300",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (![44100, 48000, 88200, 96000].includes(sampleRate)) {
+      toast({
+        title: "Invalid Sample Rate",
+        description: "Sample rate must be 44.1kHz, 48kHz, 88.2kHz, or 96kHz",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Update the project locally (for demo mode)
+      const updatedProject = {
+        ...project,
+        bpm,
+        sample_rate: sampleRate
+      };
+      setProject(updatedProject);
+      setIsEditing(false);
+
+      toast({
+        title: "Project updated",
+        description: "BPM and sample rate have been updated successfully."
+      });
+
+      // For real projects, add database update logic here
+      // await supabase.from('projects').update({ bpm, sample_rate }).eq('id', project.id);
+    } catch (error) {
+      toast({
+        title: "Error updating project",
+        description: "Could not save changes. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -197,20 +270,80 @@ export default function ProjectDetail() {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Music className="h-5 w-5" />
-                  Project Details
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Music className="h-5 w-5" />
+                    Project Details
+                  </div>
+                  {!isEditing ? (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={startEditing}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={saveChanges}
+                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={cancelEditing}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">BPM</p>
-                    <p className="text-2xl font-bold">{project.bpm}</p>
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        min="40"
+                        max="300"
+                        value={editValues.bpm}
+                        onChange={(e) => setEditValues(prev => ({ ...prev, bpm: e.target.value }))}
+                        className="text-2xl font-bold h-12"
+                        placeholder="120"
+                      />
+                    ) : (
+                      <p className="text-2xl font-bold">{project.bpm}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Sample Rate</p>
-                    <p className="text-2xl font-bold">{project.sample_rate / 1000}kHz</p>
+                    {isEditing ? (
+                      <Select
+                        value={editValues.sample_rate}
+                        onValueChange={(value) => setEditValues(prev => ({ ...prev, sample_rate: value }))}
+                      >
+                        <SelectTrigger className="text-2xl font-bold h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="44100">44.1 kHz</SelectItem>
+                          <SelectItem value="48000">48 kHz</SelectItem>
+                          <SelectItem value="88200">88.2 kHz</SelectItem>
+                          <SelectItem value="96000">96 kHz</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-2xl font-bold">{project.sample_rate / 1000}kHz</p>
+                    )}
                   </div>
                   {project.due_date && (
                     <div className="space-y-2">
