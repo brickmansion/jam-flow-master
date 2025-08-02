@@ -23,7 +23,7 @@ interface NewProjectModalProps {
     bpm: number;
     sample_rate: number;
     song_key: string;
-  }) => void;
+  }) => Promise<void>;
 }
 
 export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewProjectModalProps) {
@@ -81,27 +81,21 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
         return;
       }
 
-      // For now, just simulate success until database is ready
-      const error = null;
-
-      if (error) throw error;
-
-      toast({
-        title: "Project created",
-        description: `${formData.title} has been created successfully.`
-      });
-
-      onProjectCreated({
+      // Create the project
+      const projectData = {
         title: formData.title,
         artist: formData.artist,
         due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
         bpm,
         sample_rate: sampleRate,
         song_key: formData.song_key
-      });
-      onOpenChange(false);
+      };
+
+      // Call the parent component's project creation handler
+      await onProjectCreated(projectData);
       
-      // Reset form
+      // Close modal and reset form
+      onOpenChange(false);
       setFormData({ title: '', artist: '', bpm: '', song_key: 'C major', sample_rate: '48000' });
       setDueDate(undefined);
     } catch (error: any) {
