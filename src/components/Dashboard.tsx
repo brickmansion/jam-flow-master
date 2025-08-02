@@ -30,6 +30,77 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
+  // Helper function to get demo projects from localStorage or default
+  const getDemoProjects = (): Project[] => {
+    const stored = localStorage.getItem('demo-projects');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    // Return default demo projects
+    return [
+      {
+        id: 'demo-project-1',
+        title: 'Summer Vibes',
+        artist: 'The Waves',
+        due_date: '2025-08-15',
+        bpm: 128,
+        sample_rate: 48000,
+        song_key: 'G major',
+        producer_id: 'demo-user-id',
+        created_at: '2025-01-01T00:00:00Z'
+      },
+      {
+        id: 'demo-project-2',
+        title: 'Midnight Sessions',
+        artist: 'Luna Eclipse',
+        due_date: '2025-08-20',
+        bpm: 110,
+        sample_rate: 44100,
+        song_key: 'A minor',
+        producer_id: 'demo-user-id',
+        created_at: '2025-01-02T00:00:00Z'
+      },
+      {
+        id: 'demo-project-3',
+        title: 'Electric Dreams',
+        artist: 'Synth City',
+        due_date: null,
+        bpm: 140,
+        sample_rate: 48000,
+        song_key: 'E minor',
+        producer_id: 'demo-user-id',
+        created_at: '2025-01-03T00:00:00Z'
+      }
+    ];
+  };
+
+  // Helper function to save demo projects to localStorage
+  const saveDemoProjects = (projects: Project[]) => {
+    localStorage.setItem('demo-projects', JSON.stringify(projects));
+  };
+
+  // Function to add a new project (for both demo and real users)
+  const addProject = (projectData: Omit<Project, 'id' | 'created_at' | 'producer_id'>) => {
+    const newProject: Project = {
+      ...projectData,
+      id: user?.id === 'demo-user-id' ? `demo-project-${Date.now()}` : `project-${Date.now()}`,
+      producer_id: user?.id || '',
+      created_at: new Date().toISOString()
+    };
+
+    if (user?.id === 'demo-user-id') {
+      // For demo users, add to localStorage
+      const currentProjects = getDemoProjects();
+      const updatedProjects = [...currentProjects, newProject];
+      saveDemoProjects(updatedProjects);
+      setProjects(updatedProjects);
+    } else {
+      // For real users, add to database (to be implemented)
+      // For now, just add to state
+      setProjects(prev => [...prev, newProject]);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchProjects();
@@ -40,42 +111,13 @@ export default function Dashboard() {
     try {
       // Check if we're in demo mode
       if (user?.id === 'demo-user-id') {
-        // Return demo projects
-        setProjects([
-          {
-            id: 'demo-project-1',
-            title: 'Summer Vibes',
-            artist: 'The Waves',
-            due_date: '2025-08-15',
-            bpm: 128,
-            sample_rate: 48000,
-            song_key: 'G major',
-            producer_id: 'demo-user-id',
-            created_at: '2025-01-01T00:00:00Z'
-          },
-          {
-            id: 'demo-project-2',
-            title: 'Midnight Sessions',
-            artist: 'Luna Eclipse',
-            due_date: '2025-08-20',
-            bpm: 110,
-            sample_rate: 44100,
-            song_key: 'A minor',
-            producer_id: 'demo-user-id',
-            created_at: '2025-01-02T00:00:00Z'
-          },
-          {
-            id: 'demo-project-3',
-            title: 'Electric Dreams',
-            artist: 'Synth City',
-            due_date: null,
-            bpm: 140,
-            sample_rate: 48000,
-            song_key: 'E minor',
-            producer_id: 'demo-user-id',
-            created_at: '2025-01-03T00:00:00Z'
-          }
-        ]);
+        // Get demo projects from localStorage or defaults
+        const demoProjects = getDemoProjects();
+        setProjects(demoProjects);
+        // Save defaults to localStorage if not already saved
+        if (!localStorage.getItem('demo-projects')) {
+          saveDemoProjects(demoProjects);
+        }
       } else {
         // For real users, return empty array until database is ready
         setProjects([]);
@@ -153,10 +195,7 @@ export default function Dashboard() {
           </div>
           
           {profile?.role === 'producer' && (
-            <Button onClick={() => {
-              console.log('New Project button clicked');
-              setShowNewProjectModal(true);
-            }}>
+            <Button onClick={() => setShowNewProjectModal(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>
@@ -253,7 +292,10 @@ export default function Dashboard() {
       <NewProjectModal 
         open={showNewProjectModal}
         onOpenChange={setShowNewProjectModal}
-        onProjectCreated={fetchProjects}
+        onProjectCreated={(projectData) => {
+          addProject(projectData);
+          fetchProjects(); // Refresh the list
+        }}
       />
     </div>
   );

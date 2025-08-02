@@ -16,7 +16,14 @@ import { useToast } from '@/hooks/use-toast';
 interface NewProjectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onProjectCreated: () => void;
+  onProjectCreated: (projectData: {
+    title: string;
+    artist: string;
+    due_date: string | null;
+    bpm: number;
+    sample_rate: number;
+    song_key: string;
+  }) => void;
 }
 
 export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewProjectModalProps) {
@@ -34,11 +41,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted', formData);
-    if (!user) {
-      console.log('No user found');
-      return;
-    }
+    if (!user) return;
 
     setIsLoading(true);
 
@@ -88,7 +91,14 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
         description: `${formData.title} has been created successfully.`
       });
 
-      onProjectCreated();
+      onProjectCreated({
+        title: formData.title,
+        artist: formData.artist,
+        due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
+        bpm,
+        sample_rate: sampleRate,
+        song_key: formData.song_key
+      });
       onOpenChange(false);
       
       // Reset form
