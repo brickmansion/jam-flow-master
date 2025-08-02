@@ -33,6 +33,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [phaseProgress, setPhaseProgress] = useState<Record<string, number>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
     bpm: '',
@@ -269,6 +270,17 @@ export default function ProjectDetail() {
     );
   }
 
+  const handleProgressChange = (newProgress: number, newPhaseProgress: Record<string, number>) => {
+    setProgress(newProgress);
+    setPhaseProgress(newPhaseProgress);
+  };
+
+  const getPhaseStatus = (phase: string, progressValue: number) => {
+    if (progressValue === 100) return { text: '✓ Complete', class: 'text-green-600 font-medium' };
+    if (progressValue > 0) return { text: '⏸ In Progress', class: 'text-blue-600 font-medium' };
+    return { text: '⏳ Pending', class: 'text-muted-foreground' };
+  };
+
   const daysUntilDue = getDaysUntilDue(project.due_date);
 
   return (
@@ -460,7 +472,7 @@ export default function ProjectDetail() {
 
             <Card>
               <CardContent className="p-6">
-                <TaskBoard projectId={id!} />
+                <TaskBoard projectId={id!} onProgressChange={handleProgressChange} />
               </CardContent>
             </Card>
           </div>
@@ -485,27 +497,49 @@ export default function ProjectDetail() {
                   </div>
                   
                   <div className="space-y-3 pt-4">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span>Pre-production</span>
-                      <span className="text-green-600 font-medium">✓ Complete</span>
+                      <div className="flex items-center gap-2">
+                        <span className={getPhaseStatus('pre-production', phaseProgress['pre-production'] || 0).class}>
+                          {getPhaseStatus('pre-production', phaseProgress['pre-production'] || 0).text}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {phaseProgress['pre-production'] || 0}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span>Recording</span>
-                      <span className="text-blue-600 font-medium">
-                        {progress > 30 ? '✓ Complete' : '⏸ In Progress'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={getPhaseStatus('recording', phaseProgress['recording'] || 0).class}>
+                          {getPhaseStatus('recording', phaseProgress['recording'] || 0).text}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {phaseProgress['recording'] || 0}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span>Mixing</span>
-                      <span className="text-muted-foreground">
-                        {progress > 60 ? '⏸ In Progress' : '⏳ Pending'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={getPhaseStatus('mixing', phaseProgress['mixing'] || 0).class}>
+                          {getPhaseStatus('mixing', phaseProgress['mixing'] || 0).text}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {phaseProgress['mixing'] || 0}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span>Mastering</span>
-                      <span className="text-muted-foreground">
-                        {progress > 80 ? '⏸ In Progress' : '⏳ Pending'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={getPhaseStatus('mastering', phaseProgress['mastering'] || 0).class}>
+                          {getPhaseStatus('mastering', phaseProgress['mastering'] || 0).text}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {phaseProgress['mastering'] || 0}%
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -29,13 +29,15 @@ export interface Task {
   project_id: string;
   created_at: string;
   updated_at: string;
+  category?: 'pre-production' | 'recording' | 'mixing' | 'mastering' | 'other';
 }
 
 interface TaskBoardProps {
   projectId: string;
+  onProgressChange?: (progress: number, phaseProgress: Record<string, number>) => void;
 }
 
-export function TaskBoard({ projectId }: TaskBoardProps) {
+export function TaskBoard({ projectId, onProgressChange }: TaskBoardProps) {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -91,7 +93,7 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
       }
     }
 
-    // Default demo tasks for demo projects
+    // Default demo tasks for demo projects with categories
     const demoTasks: Task[] = [
       {
         id: `demo-task-1-${projectId}`,
@@ -103,7 +105,8 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
         external_link: 'https://wetransfer.com/demo-vocals',
         project_id: projectId,
         created_at: '2025-08-01T10:00:00Z',
-        updated_at: '2025-08-01T10:00:00Z'
+        updated_at: '2025-08-01T10:00:00Z',
+        category: 'recording'
       },
       {
         id: `demo-task-2-${projectId}`,
@@ -114,7 +117,8 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
         due_date: '2025-08-12',
         project_id: projectId,
         created_at: '2025-08-01T11:00:00Z',
-        updated_at: '2025-08-01T11:00:00Z'
+        updated_at: '2025-08-01T11:00:00Z',
+        category: 'mixing'
       },
       {
         id: `demo-task-3-${projectId}`,
@@ -125,7 +129,32 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
         due_date: '2025-08-15',
         project_id: projectId,
         created_at: '2025-08-01T12:00:00Z',
-        updated_at: '2025-08-01T12:00:00Z'
+        updated_at: '2025-08-01T12:00:00Z',
+        category: 'mastering'
+      },
+      {
+        id: `demo-task-4-${projectId}`,
+        title: 'Song arrangement',
+        description: 'Finalize song structure and arrangement',
+        status: 'completed',
+        priority: 'medium',
+        due_date: '2025-08-08',
+        project_id: projectId,
+        created_at: '2025-08-01T09:00:00Z',
+        updated_at: '2025-08-01T09:00:00Z',
+        category: 'pre-production'
+      },
+      {
+        id: `demo-task-5-${projectId}`,
+        title: 'Record bass guitar',
+        description: 'Record bass guitar parts for all sections',
+        status: 'completed',
+        priority: 'medium',
+        due_date: '2025-08-09',
+        project_id: projectId,
+        created_at: '2025-08-01T08:00:00Z',
+        updated_at: '2025-08-01T08:00:00Z',
+        category: 'recording'
       }
     ];
     setTasks(demoTasks);
@@ -152,6 +181,36 @@ export function TaskBoard({ projectId }: TaskBoardProps) {
     setIsDrawerOpen(false);
     setSelectedTask(null);
   };
+
+  const calculateProgress = (tasks: Task[]) => {
+    if (tasks.length === 0) return { overall: 0, phases: {} };
+    
+    const completed = tasks.filter(t => t.status === 'completed').length;
+    const overall = Math.round((completed / tasks.length) * 100);
+    
+    // Calculate progress by phase
+    const phases = ['pre-production', 'recording', 'mixing', 'mastering'] as const;
+    const phaseProgress: Record<string, number> = {};
+    
+    phases.forEach(phase => {
+      const phaseTasks = tasks.filter(t => t.category === phase);
+      if (phaseTasks.length > 0) {
+        const phaseCompleted = phaseTasks.filter(t => t.status === 'completed').length;
+        phaseProgress[phase] = Math.round((phaseCompleted / phaseTasks.length) * 100);
+      } else {
+        phaseProgress[phase] = 0;
+      }
+    });
+    
+    return { overall, phases: phaseProgress };
+  };
+
+  useEffect(() => {
+    if (onProgressChange && tasks.length > 0) {
+      const progress = calculateProgress(tasks);
+      onProgressChange(progress.overall, progress.phases);
+    }
+  }, [tasks, onProgressChange]);
 
   const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
     if (user?.id === 'demo-user-id') {
