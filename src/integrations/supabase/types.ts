@@ -144,6 +144,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_project: {
+        Args: { project_uuid: string }
+        Returns: boolean
+      }
       is_project_member: {
         Args: { project_uuid: string }
         Returns: boolean
