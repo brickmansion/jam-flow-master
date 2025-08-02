@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      projects: {
+        Row: {
+          artist: string
+          bpm: number
+          created_at: string
+          due_date: string | null
+          id: string
+          producer_id: string
+          sample_rate: number
+          song_key: Database["public"]["Enums"]["song_key"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          artist: string
+          bpm: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          producer_id: string
+          sample_rate: number
+          song_key?: Database["public"]["Enums"]["song_key"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          artist?: string
+          bpm?: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          producer_id?: string
+          sample_rate?: number
+          song_key?: Database["public"]["Enums"]["song_key"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +61,31 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      song_key:
+        | "C major"
+        | "C minor"
+        | "C♯ major"
+        | "C♯ minor"
+        | "D major"
+        | "D minor"
+        | "E♭ major"
+        | "E♭ minor"
+        | "E major"
+        | "E minor"
+        | "F major"
+        | "F minor"
+        | "F♯ major"
+        | "F♯ minor"
+        | "G major"
+        | "G minor"
+        | "A♭ major"
+        | "A♭ minor"
+        | "A major"
+        | "A minor"
+        | "B♭ major"
+        | "B♭ minor"
+        | "B major"
+        | "B minor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +212,33 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      song_key: [
+        "C major",
+        "C minor",
+        "C♯ major",
+        "C♯ minor",
+        "D major",
+        "D minor",
+        "E♭ major",
+        "E♭ minor",
+        "E major",
+        "E minor",
+        "F major",
+        "F minor",
+        "F♯ major",
+        "F♯ minor",
+        "G major",
+        "G minor",
+        "A♭ major",
+        "A♭ minor",
+        "A major",
+        "A minor",
+        "B♭ major",
+        "B♭ minor",
+        "B major",
+        "B minor",
+      ],
+    },
   },
 } as const
