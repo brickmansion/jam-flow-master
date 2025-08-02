@@ -117,5 +117,7 @@ All colors MUST be HSL.
 @layer utilities {
   .brand-gradient {
     background: linear-gradient(135deg, hsl(var(--brand)), hsl(var(--brand) / 0.8));
+    -webkit-background-clip: text;
+    background-clip: text;
   }
 }
