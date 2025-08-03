@@ -9,24 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { Database } from '@/integrations/supabase/types';
 
-interface FileUpload {
-  id: string;
-  filename: string;
-  original_filename: string;
-  file_path: string;
-  file_size: number;
-  mime_type: string;
-  category: 'stems' | 'mixes' | 'references' | 'notes' | 'sessions';
-  version: number;
-  description?: string;
-  created_at: string;
-  uploaded_by: string;
-}
+type FileUpload = Database['public']['Tables']['file_uploads']['Row'];
 
 interface FileUploadZoneProps {
   projectId: string;
-  category: 'stems' | 'mixes' | 'references' | 'notes' | 'sessions';
+  category: Database['public']['Enums']['file_category'];
   title: string;
   allowedTypes?: string[];
   maxSize?: number; // in MB
@@ -310,10 +299,16 @@ export function FileUploadZone({
             >
               <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-lg font-medium mb-2">
-                Drop files here or click to browse
+                {category === 'sessions' 
+                  ? 'Upload or drag-and-drop Pro Tools sessions' 
+                  : 'Drop files here or click to browse'
+                }
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                Maximum file size: {maxSize}MB
+                {category === 'sessions' 
+                  ? `Files are resumable up to ${Math.floor(maxSize/1000)}GB` 
+                  : `Maximum file size: ${maxSize}MB`
+                }
                 {allowedTypes.length > 0 && !allowedTypes.includes('*') && (
                   <span className="block">
                     Allowed types: {allowedTypes.join(', ')}
@@ -323,7 +318,10 @@ export function FileUploadZone({
               
               <div className="space-y-4">
                 <Textarea
-                  placeholder="Add a description for this upload (optional)"
+                  placeholder={category === 'sessions' 
+                    ? "Optional notes (e.g., 'Full session copy-in')" 
+                    : "Add a description for this upload (optional)"
+                  }
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="max-w-md mx-auto"
@@ -331,7 +329,8 @@ export function FileUploadZone({
                 
                 <Button asChild disabled={uploading}>
                   <label className="cursor-pointer">
-                    {uploading ? 'Uploading...' : 'Select Files'}
+                    {uploading ? 'Uploading...' : 
+                     category === 'sessions' ? 'Select Session File' : 'Select Files'}
                     <input
                       type="file"
                       multiple
