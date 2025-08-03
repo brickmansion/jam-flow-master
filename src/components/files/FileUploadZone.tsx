@@ -1,0 +1,405 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Upload, File, X, Download, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
+
+interface FileUpload {
+  id: string;
+  filename: string;
+  original_filename: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  category: 'stems' | 'mixes' | 'references' | 'notes';
+  version: number;
+  description?: string;
+  created_at: string;
+  uploaded_by: string;
+}
+
+interface FileUploadZoneProps {
+  projectId: string;
+  category: 'stems' | 'mixes' | 'references' | 'notes';
+  title: string;
+  allowedTypes?: string[];
+  maxSize?: number; // in MB
+}
+
+export function FileUploadZone({ 
+  projectId, 
+  category, 
+  title,
+  allowedTypes = ['*'],
+  maxSize = 100 
+}: FileUploadZoneProps) {
+  const [files, setFiles] = useState<FileUpload[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [description, setDescription] = useState('');
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { profile } = useUserProfile();
+
+  // Check if user has premium uploads
+  const canUpload = profile?.premium_uploads || false;
+
+  useEffect(() => {
+    fetchFiles();
+  }, [projectId, category]);
+
+  const fetchFiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('file_uploads')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('category', category)
+        .order('version', { ascending: false });
+
+      if (error) throw error;
+      setFiles(data || []);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load files",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    
+    if (!canUpload) {
+      toast({
+        title: "Premium feature",
+        description: "File uploads require a premium account",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    uploadFiles(droppedFiles);
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canUpload) {
+      toast({
+        title: "Premium feature",
+        description: "File uploads require a premium account",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedFiles = Array.from(e.target.files || []);
+    uploadFiles(selectedFiles);
+  };
+
+  const uploadFiles = async (filesToUpload: File[]) => {
+    if (!user) return;
+
+    setUploading(true);
+
+    try {
+      // Get next version number
+      const { data: versionData, error: versionError } = await supabase
+        .rpc('get_next_file_version', {
+          p_project_id: projectId,
+          p_category: category
+        });
+
+      if (versionError) throw versionError;
+
+      const nextVersion = versionData || 1;
+
+      for (const file of filesToUpload) {
+        // Validate file size
+        if (file.size > maxSize * 1024 * 1024) {
+          toast({
+            title: "File too large",
+            description: `${file.name} exceeds ${maxSize}MB limit`,
+            variant: "destructive"
+          });
+          continue;
+        }
+
+        // Validate file type
+        if (allowedTypes.length > 0 && !allowedTypes.includes('*')) {
+          const fileExtension = file.name.split('.').pop()?.toLowerCase();
+          if (!allowedTypes.some(type => type.includes(fileExtension || ''))) {
+            toast({
+              title: "Invalid file type",
+              description: `${file.name} is not a supported file type`,
+              variant: "destructive"
+            });
+            continue;
+          }
+        }
+
+        // Upload to storage
+        const fileName = `${projectId}/${category}/${nextVersion}-${file.name}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Save metadata to database
+        const { error: dbError } = await supabase
+          .from('file_uploads')
+          .insert({
+            project_id: projectId,
+            uploaded_by: user.id,
+            filename: fileName,
+            original_filename: file.name,
+            file_path: fileName,
+            file_size: file.size,
+            mime_type: file.type,
+            category,
+            version: nextVersion,
+            description: description || null
+          });
+
+        if (dbError) throw dbError;
+      }
+
+      toast({
+        title: "Upload successful",
+        description: `${filesToUpload.length} file(s) uploaded as version ${nextVersion}`
+      });
+
+      setDescription('');
+      fetchFiles();
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload files. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const downloadFile = async (file: FileUpload) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('project-files')
+        .download(file.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.original_filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download failed",
+        description: "Failed to download file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteFile = async (file: FileUpload) => {
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('project-files')
+        .remove([file.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('file_uploads')
+        .delete()
+        .eq('id', file.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "File deleted",
+        description: "File has been removed successfully"
+      });
+
+      fetchFiles();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <Badge variant="outline">
+          {files.length} file{files.length !== 1 ? 's' : ''}
+        </Badge>
+      </div>
+
+      {/* Upload Zone */}
+      {canUpload && (
+        <Card>
+          <CardContent className="p-6">
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                dragOver
+                  ? 'border-primary bg-primary/5'
+                  : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-medium mb-2">
+                Drop files here or click to browse
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Maximum file size: {maxSize}MB
+                {allowedTypes.length > 0 && !allowedTypes.includes('*') && (
+                  <span className="block">
+                    Allowed types: {allowedTypes.join(', ')}
+                  </span>
+                )}
+              </p>
+              
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="Add a description for this upload (optional)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="max-w-md mx-auto"
+                />
+                
+                <Button asChild disabled={uploading}>
+                  <label className="cursor-pointer">
+                    {uploading ? 'Uploading...' : 'Select Files'}
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileInput}
+                      accept={allowedTypes.includes('*') ? undefined : allowedTypes.join(',')}
+                    />
+                  </label>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Premium Upgrade Notice */}
+      {!canUpload && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-6 text-center">
+            <Upload className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+            <p className="text-lg font-medium text-orange-900 mb-2">
+              Premium Feature
+            </p>
+            <p className="text-sm text-orange-700">
+              File uploads are available with a premium account. 
+              Contact your administrator to upgrade.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Files List */}
+      {files.length > 0 && (
+        <div className="space-y-2">
+          {files.map((file) => (
+            <Card key={file.id}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <File className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{file.original_filename}</p>
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <span>v{file.version}</span>
+                        <span>•</span>
+                        <span>{formatFileSize(file.file_size)}</span>
+                        <span>•</span>
+                        <span>{new Date(file.created_at).toLocaleDateString()}</span>
+                      </div>
+                      {file.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {file.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadFile(file)}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteFile(file)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

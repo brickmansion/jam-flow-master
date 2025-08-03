@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, TrendingUp, Music, Edit2, Check, X } from 'lucide-react';
 import { TaskBoard } from '@/components/tasks/TaskBoard';
 import { CollaboratorsSection } from '@/components/collaborators/CollaboratorsSection';
+import { ProjectFilesSection } from '@/components/files/ProjectFilesSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -544,6 +545,8 @@ export default function ProjectDetail() {
               producerId={project.producer_id}
               producerEmail={user?.email}
             />
+
+            <ProjectFilesSection projectId={project.id} />
           </div>
 
           {/* Progress Sidebar */}

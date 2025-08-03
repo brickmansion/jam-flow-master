@@ -10,6 +10,7 @@ export interface UserProfile {
   avatar_url?: string;
   display_name: string;
   bio?: string;
+  premium_uploads?: boolean;
   prefs: {
     theme?: 'system' | 'dark' | 'light';
     dateFormat?: 'MM/DD/YYYY' | 'DD/MM/YYYY';
