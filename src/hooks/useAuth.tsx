@@ -16,7 +16,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, role: 'producer' | 'assistant') => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  demoSignIn: () => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -103,41 +102,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const demoSignIn = async () => {
-    // Create a mock user session for demo mode
-    const mockUser = {
-      id: 'demo-user-id',
-      email: 'demo@seshprep.com',
-      user_metadata: { role: 'producer' },
-      created_at: new Date().toISOString(),
-      app_metadata: {},
-      aud: 'authenticated',
-      confirmed_at: new Date().toISOString(),
-      email_confirmed_at: new Date().toISOString(),
-      last_sign_in_at: new Date().toISOString(),
-      phone: '',
-      updated_at: new Date().toISOString()
-    } as any;
-
-    const mockSession = {
-      access_token: 'demo-token',
-      refresh_token: 'demo-refresh',
-      expires_in: 3600,
-      token_type: 'bearer',
-      user: mockUser
-    } as any;
-
-    // Set demo state directly
-    setUser(mockUser);
-    setSession(mockSession);
-    setProfile({
-      id: 'demo-user-id',
-      role: 'producer',
-      display_name: 'Demo User'
-    });
-
-    return { error: null };
-  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -151,7 +115,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    demoSignIn,
   };
 
   return (

@@ -6,11 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navbar } from '@/components/Navbar';
 
 export default function Landing() {
-  const { user, demoSignIn } = useAuth();
-
-  const handleDemoLogin = async () => {
-    await demoSignIn();
-  };
+  const { user } = useAuth();
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -38,16 +34,9 @@ export default function Landing() {
             with precision. Track tasks, manage checklists, and collaborate seamlessly.
           </p>
           
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+          <div className="flex justify-center">
             <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
               <Link to="/auth">Get Started</Link>
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={handleDemoLogin}
-            >
-              Preview Demo
             </Button>
           </div>
         </div>
