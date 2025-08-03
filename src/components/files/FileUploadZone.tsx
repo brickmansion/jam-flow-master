@@ -8,6 +8,7 @@ import { Upload, File, X, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { AudioPlayer } from './AudioPlayer';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Database } from '@/integrations/supabase/types';
 
@@ -405,6 +406,9 @@ export function FileUploadZone({
                     </Button>
                   </div>
                 </div>
+
+                {/* Audio Player for audio files */}
+                <AudioPlayer file={file} />
               </CardContent>
             </Card>
           ))}
