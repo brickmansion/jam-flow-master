@@ -55,15 +55,19 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
   }, [audioUrl]);
 
   const initializeAudio = async () => {
+    console.log('Initializing audio for fileKey:', fileKey);
     if (hasInitialized || isTooLarge) return;
     
     setIsLoading(true);
     try {
+      console.log('Getting signed URL...');
       const signedUrl = await getSignedAssetUrl(fileKey);
+      console.log('Got signed URL:', signedUrl ? 'success' : 'null');
       setAudioUrl(signedUrl);
       setHasInitialized(true);
     } catch (error) {
       console.error('Error getting signed URL:', error);
+      console.log('Full error details:', error);
       // Show user-friendly error
       alert('Error loading audio file. Please try again or download the file.');
     } finally {
@@ -72,24 +76,32 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
   };
 
   const togglePlay = async () => {
+    console.log('Toggle play clicked, hasInitialized:', hasInitialized, 'audioUrl:', !!audioUrl);
     const audio = audioRef.current;
     
     // Initialize audio on first play
     if (!hasInitialized) {
+      console.log('Initializing audio...');
       await initializeAudio();
       return;
     }
     
-    if (!audio || !audioUrl) return;
+    if (!audio || !audioUrl) {
+      console.log('Missing audio element or URL:', { audio: !!audio, audioUrl: !!audioUrl });
+      return;
+    }
 
     try {
       if (isPlaying) {
+        console.log('Pausing audio');
         audio.pause();
       } else {
+        console.log('Playing audio from:', audioUrl);
         await audio.play();
       }
     } catch (error) {
       console.error('Error playing audio:', error);
+      console.log('Audio error details:', error);
     }
   };
 
