@@ -27,7 +27,7 @@ const editProfileSchema = z.object({
   bio: z.string()
     .max(280, 'Bio must be less than 280 characters')
     .optional(),
-  role: z.enum(['producer', 'assistant']),
+  role: z.enum(['producer', 'assistant', 'artist']),
 });
 
 type EditProfileForm = z.infer<typeof editProfileSchema>;
@@ -47,7 +47,7 @@ export function EditProfileForm({ profile, onSave }: EditProfileFormProps) {
     defaultValues: {
       display_name: profile?.display_name || '',
       bio: profile?.bio || '',
-      role: (authProfile?.role || 'producer') as 'producer' | 'assistant',
+      role: (authProfile?.role || 'producer') as 'producer' | 'assistant' | 'artist',
     },
   });
 
@@ -148,6 +148,7 @@ export function EditProfileForm({ profile, onSave }: EditProfileFormProps) {
                   <SelectContent>
                     <SelectItem value="producer">Producer</SelectItem>
                     <SelectItem value="assistant">Assistant</SelectItem>
+                    <SelectItem value="artist">Artist</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
