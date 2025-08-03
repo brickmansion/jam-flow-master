@@ -173,7 +173,7 @@ export function ProjectsList() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/project/${project.id}`)}
+                onClick={() => navigate(`/projects/${project.id}`)}
                 className="ml-4"
               >
                 <ExternalLink className="h-4 w-4" />
