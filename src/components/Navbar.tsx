@@ -54,16 +54,15 @@ export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) 
     <>
       <nav className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="flex h-16 items-center px-4">
-          {/* Logo and Title */}
-          <Link to={user ? '/dashboard' : '/'} className="flex items-center space-x-2">
+          {/* Logo */}
+          <Link to={user ? '/dashboard' : '/'} className="flex items-center">
             <img
               src="/lovable-uploads/000baca5-73ff-4c84-8d5b-14241b75aaca.png"
               alt="SeshPrep logo"
-              width={28}
-              height={28}
+              width={40}
+              height={40}
               className="select-none"
             />
-            <span className="text-xl font-bold">{title}</span>
           </Link>
 
           {/* Demo Mode Badge */}
