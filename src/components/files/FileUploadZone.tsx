@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, File, X, Download, Trash2 } from 'lucide-react';
+import { Upload, File, X, Download, Trash2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AudioPlayer } from './AudioPlayer';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Database } from '@/integrations/supabase/types';
 
@@ -366,52 +367,91 @@ export function FileUploadZone({
       {/* Files List */}
       {files.length > 0 && (
         <div className="space-y-2">
-          {files.map((file) => (
-            <Card key={file.id}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <File className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{file.original_filename}</p>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <span>v{file.version}</span>
-                        <span>•</span>
-                        <span>{formatFileSize(file.file_size)}</span>
-                        <span>•</span>
-                        <span>{new Date(file.created_at).toLocaleDateString()}</span>
+          {files.map((file) => {
+            const isAudioFile = file.mime_type.startsWith('audio/');
+            const isAudioExtension = /\.(wav|aiff|flac|mp3|aac)$/i.test(file.original_filename);
+            const shouldShowAudioPlayer = (category === 'mixes' || category === 'stems') && 
+                                        (isAudioFile || isAudioExtension);
+            const fileSizeMB = file.file_size / (1024 * 1024);
+
+            return (
+              <Card key={file.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <File className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{file.original_filename}</p>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <span>v{file.version}</span>
+                          <span>•</span>
+                          <span>{formatFileSize(file.file_size)}</span>
+                          <span>•</span>
+                          <span>{new Date(file.created_at).toLocaleDateString()}</span>
+                        </div>
+                        {file.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {file.description}
+                          </p>
+                        )}
                       </div>
-                      {file.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {file.description}
-                        </p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      {shouldShowAudioPlayer ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => downloadFile(file)}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => deleteFile(file)}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadFile(file)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteFile(file)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadFile(file)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteFile(file)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
 
-                {/* Audio Player for audio files */}
-                <AudioPlayer file={file} />
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Audio Player for mixes and stems only */}
+                  {shouldShowAudioPlayer && (
+                    <AudioPlayer 
+                      fileKey={file.file_path}
+                      sizeMb={fileSizeMB}
+                      fileName={file.original_filename}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

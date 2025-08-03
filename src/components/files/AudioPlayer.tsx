@@ -1,19 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { getSignedAssetUrl } from '@/utils/getSignedAssetUrl';
 
 interface AudioPlayerProps {
-  file: {
-    id: string;
-    file_path: string;
-    original_filename: string;
-    mime_type: string;
-  };
+  fileKey: string;
+  sizeMb: number;
+  fileName: string;
 }
 
-export function AudioPlayer({ file }: AudioPlayerProps) {
+const MAX_PREVIEW_SIZE_MB = 750;
+
+export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -21,69 +21,79 @@ export function AudioPlayer({ file }: AudioPlayerProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Get audio URL from Supabase storage
-  useEffect(() => {
-    const getAudioUrl = async () => {
-      try {
-        const { data } = supabase.storage
-          .from('project-files')
-          .getPublicUrl(file.file_path);
-        
-        setAudioUrl(data.publicUrl);
-      } catch (error) {
-        console.error('Error getting audio URL:', error);
-      }
-    };
+  // Check if file is too large for preview
+  const isTooLarge = sizeMb > MAX_PREVIEW_SIZE_MB;
 
-    getAudioUrl();
-  }, [file.file_path]);
-
-  // Update current time
+  // Update current time and handle audio events
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const updateTime = () => setCurrentTime(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
+    const handleEnded = () => setIsPlaying(false);
+    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => setIsPlaying(true);
 
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('ended', () => setIsPlaying(false));
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('play', handlePlay);
 
     return () => {
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('ended', () => setIsPlaying(false));
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('play', handlePlay);
     };
   }, [audioUrl]);
 
-  const togglePlay = async () => {
-    const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
-
-    setIsLoading(true);
+  const initializeAudio = async () => {
+    if (hasInitialized || isTooLarge) return;
     
+    setIsLoading(true);
     try {
-      if (isPlaying) {
-        audio.pause();
-        setIsPlaying(false);
-      } else {
-        await audio.play();
-        setIsPlaying(true);
-      }
+      const signedUrl = await getSignedAssetUrl(fileKey);
+      setAudioUrl(signedUrl);
+      setHasInitialized(true);
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('Error getting signed URL:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const togglePlay = async () => {
+    const audio = audioRef.current;
+    
+    // Initialize audio on first play
+    if (!hasInitialized) {
+      await initializeAudio();
+      return;
+    }
+    
+    if (!audio || !audioUrl) return;
+
+    try {
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        await audio.play();
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
+
   const handleSeek = (value: number[]) => {
     const audio = audioRef.current;
-    if (audio) {
+    if (audio && hasInitialized) {
       audio.currentTime = value[0];
       setCurrentTime(value[0]);
     }
@@ -119,37 +129,60 @@ export function AudioPlayer({ file }: AudioPlayerProps) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Only show player for audio files
-  if (!file.mime_type.startsWith('audio/')) {
-    return null;
-  }
+  const PlayButton = () => {
+    if (isTooLarge) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="flex-shrink-0 opacity-50"
+              >
+                <Play className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Files &gt; {MAX_PREVIEW_SIZE_MB} MB must be downloaded</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={togglePlay}
+        disabled={isLoading}
+        className="flex-shrink-0"
+      >
+        {isLoading ? (
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : isPlaying ? (
+          <Pause className="h-4 w-4" />
+        ) : (
+          <Play className="h-4 w-4" />
+        )}
+      </Button>
+    );
+  };
 
   return (
     <div className="w-full space-y-3 p-3 bg-muted/50 rounded-lg">
-      {audioUrl && (
+      {audioUrl && hasInitialized && (
         <audio
           ref={audioRef}
           src={audioUrl}
-          preload="metadata"
+          preload="none"
         />
       )}
       
       <div className="flex items-center space-x-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={togglePlay}
-          disabled={!audioUrl || isLoading}
-          className="flex-shrink-0"
-        >
-          {isLoading ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : isPlaying ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </Button>
+        <PlayButton />
 
         <div className="flex-1 space-y-1">
           <Slider
@@ -158,7 +191,7 @@ export function AudioPlayer({ file }: AudioPlayerProps) {
             step={1}
             onValueChange={handleSeek}
             className="w-full"
-            disabled={!audioUrl}
+            disabled={!hasInitialized || isTooLarge}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
@@ -171,7 +204,7 @@ export function AudioPlayer({ file }: AudioPlayerProps) {
             variant="ghost"
             size="sm"
             onClick={toggleMute}
-            disabled={!audioUrl}
+            disabled={!hasInitialized || isTooLarge}
           >
             {isMuted ? (
               <VolumeX className="h-4 w-4" />
@@ -185,7 +218,7 @@ export function AudioPlayer({ file }: AudioPlayerProps) {
             step={0.1}
             onValueChange={handleVolumeChange}
             className="w-20"
-            disabled={!audioUrl}
+            disabled={!hasInitialized || isTooLarge}
           />
         </div>
       </div>
