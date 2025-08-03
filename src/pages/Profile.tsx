@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AvatarUploader } from '@/components/AvatarUploader';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit, Mail, Calendar, User } from 'lucide-react';
+import { Edit, Mail, Calendar, User, ArrowLeft, Home } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { EditProfileForm } from '@/components/profile/EditProfileForm';
 import { ProjectsList } from '@/components/profile/ProjectsList';
@@ -15,6 +16,7 @@ export default function Profile() {
   const { profile, loading, updateProfile } = useUserProfile();
   const { user, profile: authProfile } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -43,6 +45,31 @@ export default function Profile() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/dashboard')}
+              className="hover:bg-primary/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Profile</h1>
+            </div>
+          </div>
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2"
+          >
+            <Home className="h-4 w-4" />
+            Dashboard
+          </Button>
+        </div>
+
         {/* Hero Header */}
         <Card>
           <CardContent className="pt-6">
