@@ -64,6 +64,8 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
       setHasInitialized(true);
     } catch (error) {
       console.error('Error getting signed URL:', error);
+      // Show user-friendly error
+      alert('Error loading audio file. Please try again or download the file.');
     } finally {
       setIsLoading(false);
     }
