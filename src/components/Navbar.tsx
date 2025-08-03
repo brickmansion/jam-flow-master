@@ -57,7 +57,7 @@ export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) 
           {/* Logo */}
           <Link to={user ? '/dashboard' : '/'} className="flex items-center">
             <img
-              src="/lovable-uploads/000baca5-73ff-4c84-8d5b-14241b75aaca.png"
+              src="/lovable-uploads/c8071002-45b5-4e0c-90de-6fac2060a5f6.png"
               alt="SeshPrep logo"
               width={40}
               height={40}
