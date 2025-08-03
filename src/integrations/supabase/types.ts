@@ -47,6 +47,54 @@ export type Database = {
         }
         Relationships: []
       }
+      file_uploads: {
+        Row: {
+          category: Database["public"]["Enums"]["file_category"]
+          created_at: string
+          description: string | null
+          file_path: string
+          file_size: number
+          filename: string
+          id: string
+          mime_type: string
+          original_filename: string
+          project_id: string
+          updated_at: string
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["file_category"]
+          created_at?: string
+          description?: string | null
+          file_path: string
+          file_size: number
+          filename: string
+          id?: string
+          mime_type: string
+          original_filename: string
+          project_id: string
+          updated_at?: string
+          uploaded_by: string
+          version?: number
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["file_category"]
+          created_at?: string
+          description?: string | null
+          file_path?: string
+          file_size?: number
+          filename?: string
+          id?: string
+          mime_type?: string
+          original_filename?: string
+          project_id?: string
+          updated_at?: string
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: []
+      }
       project_members: {
         Row: {
           accepted_at: string | null
@@ -191,6 +239,7 @@ export type Database = {
           display_name: string
           id: string
           prefs: Json | null
+          premium_uploads: boolean
           updated_at: string
         }
         Insert: {
@@ -200,6 +249,7 @@ export type Database = {
           display_name?: string
           id: string
           prefs?: Json | null
+          premium_uploads?: boolean
           updated_at?: string
         }
         Update: {
@@ -209,6 +259,7 @@ export type Database = {
           display_name?: string
           id?: string
           prefs?: Json | null
+          premium_uploads?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -222,6 +273,13 @@ export type Database = {
         Args: { project_uuid: string }
         Returns: boolean
       }
+      get_next_file_version: {
+        Args: {
+          p_project_id: string
+          p_category: Database["public"]["Enums"]["file_category"]
+        }
+        Returns: number
+      }
       is_producer_of_any_project: {
         Args: { user_uuid: string }
         Returns: boolean
@@ -232,6 +290,7 @@ export type Database = {
       }
     }
     Enums: {
+      file_category: "stems" | "mixes" | "references" | "notes"
       song_key:
         | "C major"
         | "C minor"
@@ -386,6 +445,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      file_category: ["stems", "mixes", "references", "notes"],
       song_key: [
         "C major",
         "C minor",
