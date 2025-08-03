@@ -139,6 +139,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string
+          id: string
+          prefs: Json | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          id: string
+          prefs?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          prefs?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -146,6 +176,10 @@ export type Database = {
     Functions: {
       can_view_project: {
         Args: { project_uuid: string }
+        Returns: boolean
+      }
+      is_producer_of_any_project: {
+        Args: { user_uuid: string }
         Returns: boolean
       }
       is_project_member: {
