@@ -33,9 +33,11 @@ export function InviteMemberModal({ onInvite }: InviteMemberModalProps) {
   };
 
   const roleOptions = [
-    { value: 'manager', label: 'Manager', description: 'Can view, comment, and manage tasks' },
-    { value: 'artist', label: 'Artist', description: 'Can view and comment only' },
-    { value: 'editor', label: 'Editor', description: 'Can view, comment, and edit tasks' },
+    { value: 'producer', label: 'Producer', description: 'Full project control and management' },
+    { value: 'manager', label: 'Manager', description: 'Can manage tasks and team members' },
+    { value: 'editor', label: 'Editor', description: 'Can edit tasks and upload files' },
+    { value: 'artist', label: 'Artist', description: 'Can view project and complete assigned tasks' },
+    { value: 'assistant', label: 'Assistant', description: 'Can view and comment on tasks' },
   ];
 
   return (

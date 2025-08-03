@@ -7,7 +7,7 @@ export interface ProjectMember {
   project_id: string;
   user_id: string | null;
   email: string;
-  role: 'manager' | 'producer' | 'artist' | 'editor';
+  role: 'manager' | 'producer' | 'artist' | 'editor' | 'assistant';
   invited_by: string;
   created_at: string;
   accepted_at: string | null;
