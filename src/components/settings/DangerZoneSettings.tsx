@@ -56,19 +56,6 @@ export function DangerZoneSettings() {
     }
   };
 
-  if (isDemoMode) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-lg bg-muted/50 p-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm">Account deletion is disabled in demo mode</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="space-y-2">
