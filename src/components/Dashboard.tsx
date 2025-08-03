@@ -395,17 +395,16 @@ export default function Dashboard() {
                   const daysUntilDue = getDaysUntilDue(project.due_date);
                   
                   return (
-                    <Card key={project.id} className="group hover:shadow-md transition-shadow">
+                    <Card 
+                      key={project.id} 
+                      className="group hover:shadow-md transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                    >
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div className="space-y-1">
                             <CardTitle className="text-lg">
-                              <Link 
-                                to={`/projects/${project.id}`}
-                                className="hover:text-primary transition-colors"
-                              >
-                                {project.title}
-                              </Link>
+                              {project.title}
                             </CardTitle>
                             <p className="text-sm text-muted-foreground">{project.artist}</p>
                           </div>
