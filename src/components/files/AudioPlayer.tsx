@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -54,82 +54,53 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
     };
   }, [audioUrl]);
 
-  // Remove the problematic auto-play useEffect
-
-  const initializeAudio = async () => {
-    console.log('Initializing audio for fileKey:', fileKey);
+  const initializeAudio = useCallback(async () => {
     if (hasInitialized || isTooLarge) return;
     
     setIsLoading(true);
     try {
-      console.log('Getting signed URL...');
       const signedUrl = await getSignedAssetUrl(fileKey);
-      console.log('Got signed URL:', signedUrl ? 'success' : 'null');
       setAudioUrl(signedUrl);
       setHasInitialized(true);
     } catch (error) {
       console.error('Error getting signed URL:', error);
-      console.log('Full error details:', error);
-      // Show user-friendly error
       alert('Error loading audio file. Please try again or download the file.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fileKey, hasInitialized, isTooLarge]);
 
-  const togglePlay = async () => {
-    console.log('Toggle play clicked, hasInitialized:', hasInitialized, 'audioUrl:', !!audioUrl);
+  const togglePlay = useCallback(async () => {
     const audio = audioRef.current;
     
     // Initialize audio on first play
     if (!hasInitialized) {
-      console.log('Initializing audio...');
       await initializeAudio();
-      
-      // After initialization, wait for the audioUrl state to update and then play
-      setTimeout(async () => {
-        const audioElement = audioRef.current;
-        if (audioElement && audioElement.src) {
-          try {
-            console.log('Playing after initialization');
-            await audioElement.play();
-          } catch (error) {
-            console.error('Error playing after init:', error);
-          }
-        }
-      }, 100);
       return;
     }
     
-    if (!audio || !audioUrl) {
-      console.log('Missing audio element or URL:', { audio: !!audio, audioUrl: !!audioUrl });
-      return;
-    }
+    if (!audio || !audioUrl) return;
 
     try {
       if (isPlaying) {
-        console.log('Pausing audio');
         audio.pause();
       } else {
-        console.log('Playing audio from:', audioUrl);
         await audio.play();
       }
     } catch (error) {
       console.error('Error playing audio:', error);
-      console.log('Audio error details:', error);
     }
-  };
+  }, [hasInitialized, initializeAudio, audioUrl, isPlaying]);
 
-  const handleSeek = (value: number[]) => {
+  const handleSeek = useCallback((value: number[]) => {
     const audio = audioRef.current;
     if (audio && hasInitialized) {
       audio.currentTime = value[0];
       setCurrentTime(value[0]);
     }
-  };
+  }, [hasInitialized]);
 
-  const handleVolumeChange = (value: number[]) => {
-    console.log('Volume change called with:', value);
+  const handleVolumeChange = useCallback((value: number[]) => {
     const audio = audioRef.current;
     const newVolume = value[0];
     if (audio) {
@@ -137,9 +108,9 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
       setVolume(newVolume);
       setIsMuted(newVolume === 0);
     }
-  };
+  }, []);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     const audio = audioRef.current;
     if (audio) {
       if (isMuted) {
@@ -150,61 +121,44 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
         setIsMuted(true);
       }
     }
-  };
+  }, [isMuted, volume]);
 
-  const formatTime = (time: number) => {
+  const formatTime = useCallback((time: number) => {
     if (isNaN(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
-  const PlayButton = () => {
-    if (isTooLarge) {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled
-                className="flex-shrink-0 opacity-50"
-              >
-                <Play className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Files &gt; {MAX_PREVIEW_SIZE_MB} MB must be downloaded</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
+  if (isTooLarge) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          console.log('PlayButton clicked!');
-          togglePlay();
-        }}
-        disabled={isLoading}
-        className="flex-shrink-0"
-      >
-        {isLoading ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        ) : isPlaying ? (
-          <Pause className="h-4 w-4" />
-        ) : (
-          <Play className="h-4 w-4" />
-        )}
-      </Button>
+      <div className="w-full space-y-3 p-3 bg-muted/50 rounded-lg">
+        <div className="flex items-center space-x-3">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className="flex-shrink-0 opacity-50"
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Files &gt; {MAX_PREVIEW_SIZE_MB} MB must be downloaded</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div className="flex-1 text-sm text-muted-foreground">
+            File too large for preview
+          </div>
+        </div>
+      </div>
     );
-  };
+  }
 
-  console.log('AudioPlayer rendering with:', { fileKey, sizeMb, fileName, isTooLarge });
   return (
     <div className="w-full space-y-3 p-3 bg-muted/50 rounded-lg">
       {audioUrl && hasInitialized && (
@@ -217,7 +171,21 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
       )}
       
       <div className="flex items-center space-x-3">
-        <PlayButton />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={togglePlay}
+          disabled={isLoading}
+          className="flex-shrink-0"
+        >
+          {isLoading ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+        </Button>
 
         <div className="flex-1 space-y-1">
           <Slider
@@ -226,7 +194,7 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
             step={1}
             onValueChange={handleSeek}
             className="w-full"
-            disabled={!hasInitialized || isTooLarge}
+            disabled={!hasInitialized}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
@@ -239,7 +207,7 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
             variant="ghost"
             size="sm"
             onClick={toggleMute}
-            disabled={!hasInitialized || isTooLarge}
+            disabled={!hasInitialized}
           >
             {isMuted ? (
               <VolumeX className="h-4 w-4" />
@@ -253,7 +221,7 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
             step={0.1}
             onValueChange={handleVolumeChange}
             className="w-20"
-            disabled={!hasInitialized || isTooLarge}
+            disabled={!hasInitialized}
           />
         </div>
       </div>
