@@ -39,7 +39,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
     bpm: '',
     song_key: 'C major',
     sample_rate: '48000',
-    collection_id: ''
+    collection_id: 'none'
   });
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
         bpm,
         sample_rate: sampleRate,
         song_key: formData.song_key,
-        collection_id: formData.collection_id || null
+        collection_id: formData.collection_id === 'none' ? null : formData.collection_id || null
       };
 
       // Call the parent component's project creation handler
@@ -121,7 +121,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
       
       // Close modal and reset form
       onOpenChange(false);
-      setFormData({ title: '', artist: '', bpm: '', song_key: 'C major', sample_rate: '48000', collection_id: '' });
+      setFormData({ title: '', artist: '', bpm: '', song_key: 'C major', sample_rate: '48000', collection_id: 'none' });
       setDueDate(undefined);
     } catch (error: any) {
       toast({
@@ -249,7 +249,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
                 <SelectValue placeholder="Select a collection" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No collection</SelectItem>
+                <SelectItem value="none">No collection</SelectItem>
                 {collections.map((collection) => (
                   <SelectItem key={collection.id} value={collection.id}>
                     {collection.title}
