@@ -54,23 +54,7 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
     };
   }, [audioUrl]);
 
-  // Auto-play when audio URL becomes available and user intended to play
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audioUrl && audio && hasInitialized && !isPlaying) {
-      // Only try to play if we're not already playing
-      const playAudio = async () => {
-        try {
-          console.log('Auto-playing audio from useEffect');
-          await audio.play();
-        } catch (error) {
-          console.error('Auto-play error:', error);
-        }
-      };
-      
-      playAudio();
-    }
-  }, [audioUrl, hasInitialized]); // Removed isLoading and isPlaying from dependencies
+  // Remove the problematic auto-play useEffect
 
   const initializeAudio = async () => {
     console.log('Initializing audio for fileKey:', fileKey);
@@ -101,7 +85,19 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
     if (!hasInitialized) {
       console.log('Initializing audio...');
       await initializeAudio();
-      // Don't return - let the auto-play effect handle playing
+      
+      // After initialization, wait for the audioUrl state to update and then play
+      setTimeout(async () => {
+        const audioElement = audioRef.current;
+        if (audioElement && audioElement.src) {
+          try {
+            console.log('Playing after initialization');
+            await audioElement.play();
+          } catch (error) {
+            console.error('Error playing after init:', error);
+          }
+        }
+      }, 100);
       return;
     }
     
