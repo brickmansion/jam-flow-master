@@ -129,6 +129,7 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
   };
 
   const handleVolumeChange = (value: number[]) => {
+    console.log('Volume change called with:', value);
     const audio = audioRef.current;
     const newVolume = value[0];
     if (audio) {
@@ -185,7 +186,10 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
       <Button
         variant="outline"
         size="sm"
-        onClick={togglePlay}
+        onClick={() => {
+          console.log('PlayButton clicked!');
+          togglePlay();
+        }}
         disabled={isLoading}
         className="flex-shrink-0"
       >
@@ -200,6 +204,7 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
     );
   };
 
+  console.log('AudioPlayer rendering with:', { fileKey, sizeMb, fileName, isTooLarge });
   return (
     <div className="w-full space-y-3 p-3 bg-muted/50 rounded-lg">
       {audioUrl && hasInitialized && (
