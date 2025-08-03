@@ -1,0 +1,5 @@
+<svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- This is a placeholder SVG. The actual logo should be provided as an SVG file -->
+  <circle cx="50" cy="50" r="45" fill="white" stroke="currentColor" stroke-width="2"/>
+  <text x="50" y="56" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="currentColor">SP</text>
+</svg>

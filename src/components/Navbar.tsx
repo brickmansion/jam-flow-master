@@ -56,7 +56,13 @@ export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) 
         <div className="flex h-16 items-center px-4">
           {/* Logo and Title */}
           <Link to={user ? '/dashboard' : '/'} className="flex items-center space-x-2">
-            <Music className="h-6 w-6 text-primary" />
+            <img
+              src="/lovable-uploads/000baca5-73ff-4c84-8d5b-14241b75aaca.png"
+              alt="SeshPrep logo"
+              width={28}
+              height={28}
+              className="select-none"
+            />
             <span className="text-xl font-bold">{title}</span>
           </Link>
 
