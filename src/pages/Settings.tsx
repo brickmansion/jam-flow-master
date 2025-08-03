@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GeneralSettings } from '@/components/settings/GeneralSettings';
@@ -7,9 +9,11 @@ import { IntegrationSettings } from '@/components/settings/IntegrationSettings';
 import { DangerZoneSettings } from '@/components/settings/DangerZoneSettings';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, Home } from 'lucide-react';
 
 export default function Settings() {
   const { profile, loading } = useUserProfile();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -25,11 +29,32 @@ export default function Settings() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your account settings and preferences
-          </p>
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/dashboard')}
+              className="hover:bg-primary/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage your account settings and preferences
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2"
+          >
+            <Home className="h-4 w-4" />
+            Dashboard
+          </Button>
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
