@@ -99,6 +99,8 @@ export function FileUploadZone({
     }
 
     const droppedFiles = Array.from(e.dataTransfer.files);
+    console.log('Dropped files:', droppedFiles.map(f => ({ name: f.name, type: f.type, size: f.size })));
+    console.log('Allowed types:', allowedTypes);
     uploadFiles(droppedFiles);
   };
 
