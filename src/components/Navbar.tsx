@@ -59,8 +59,8 @@ export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) 
             <img
               src="/lovable-uploads/c8071002-45b5-4e0c-90de-6fac2060a5f6.png"
               alt="SeshPrep logo"
-              width={40}
-              height={40}
+              width={120}
+              height={120}
               className="select-none"
             />
           </Link>
