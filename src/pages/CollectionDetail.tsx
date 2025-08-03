@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Plus, Calendar, Folder } from 'lucide-react';
+import { AddProjectModal } from '@/components/collections/AddProjectModal';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,6 +40,7 @@ export const CollectionDetail = () => {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
 
   useEffect(() => {
     if (id && user) {
@@ -221,7 +223,7 @@ export const CollectionDetail = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Tracks in Collection</h2>
-            <Button>
+            <Button onClick={() => setShowAddProjectModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Existing Project
             </Button>
@@ -235,7 +237,7 @@ export const CollectionDetail = () => {
                 <p className="text-muted-foreground mb-4">
                   Start building your collection by adding existing projects or creating new ones.
                 </p>
-                <Button>Add Project</Button>
+                <Button onClick={() => setShowAddProjectModal(true)}>Add Project</Button>
               </CardContent>
             </Card>
           ) : (
@@ -281,6 +283,13 @@ export const CollectionDetail = () => {
             </div>
           )}
         </div>
+
+        <AddProjectModal
+          open={showAddProjectModal}
+          onOpenChange={setShowAddProjectModal}
+          collectionId={id!}
+          onProjectAdded={fetchCollectionData}
+        />
       </div>
     </div>
   );
