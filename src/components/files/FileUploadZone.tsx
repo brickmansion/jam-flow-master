@@ -47,8 +47,8 @@ export function FileUploadZone({
   const { user } = useAuth();
   const { profile } = useUserProfile();
 
-  // Check if user has premium uploads
-  const canUpload = profile?.premium_uploads || false;
+  // Allow all users to upload for now
+  const canUpload = true;
 
   useEffect(() => {
     fetchFiles();
@@ -146,11 +146,11 @@ export function FileUploadZone({
 
         // Validate file type
         if (allowedTypes.length > 0 && !allowedTypes.includes('*')) {
-          const fileExtension = file.name.split('.').pop()?.toLowerCase();
-          if (!allowedTypes.some(type => type.includes(fileExtension || ''))) {
+          const fileExtension = `.${file.name.split('.').pop()?.toLowerCase()}`;
+          if (!allowedTypes.includes(fileExtension)) {
             toast({
               title: "Invalid file type",
-              description: `${file.name} is not a supported file type`,
+              description: `${file.name} is not a supported file type. Allowed: ${allowedTypes.join(', ')}`,
               variant: "destructive"
             });
             continue;
