@@ -290,7 +290,7 @@ export type Database = {
       }
     }
     Enums: {
-      file_category: "stems" | "mixes" | "references" | "notes"
+      file_category: "stems" | "mixes" | "references" | "notes" | "sessions"
       song_key:
         | "C major"
         | "C minor"
@@ -445,7 +445,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      file_category: ["stems", "mixes", "references", "notes"],
+      file_category: ["stems", "mixes", "references", "notes", "sessions"],
       song_key: [
         "C major",
         "C minor",

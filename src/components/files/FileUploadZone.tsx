@@ -17,7 +17,7 @@ interface FileUpload {
   file_path: string;
   file_size: number;
   mime_type: string;
-  category: 'stems' | 'mixes' | 'references' | 'notes';
+  category: 'stems' | 'mixes' | 'references' | 'notes' | 'sessions';
   version: number;
   description?: string;
   created_at: string;
@@ -26,7 +26,7 @@ interface FileUpload {
 
 interface FileUploadZoneProps {
   projectId: string;
-  category: 'stems' | 'mixes' | 'references' | 'notes';
+  category: 'stems' | 'mixes' | 'references' | 'notes' | 'sessions';
   title: string;
   allowedTypes?: string[];
   maxSize?: number; // in MB
@@ -166,9 +166,10 @@ export function FileUploadZone({
 
         // Upload to storage
         const fileName = `${projectId}/${category}/${nextVersion}-${file.name}`;
+        const bucketName = category === 'sessions' ? 'sessions' : 'project-files';
         
         const { error: uploadError } = await supabase.storage
-          .from('project-files')
+          .from(bucketName)
           .upload(fileName, file, {
             cacheControl: '3600',
             upsert: false
@@ -216,8 +217,9 @@ export function FileUploadZone({
 
   const downloadFile = async (file: FileUpload) => {
     try {
+      const bucketName = file.category === 'sessions' ? 'sessions' : 'project-files';
       const { data, error } = await supabase.storage
-        .from('project-files')
+        .from(bucketName)
         .download(file.file_path);
 
       if (error) throw error;
@@ -243,8 +245,9 @@ export function FileUploadZone({
   const deleteFile = async (file: FileUpload) => {
     try {
       // Delete from storage
+      const bucketName = file.category === 'sessions' ? 'sessions' : 'project-files';
       const { error: storageError } = await supabase.storage
-        .from('project-files')
+        .from(bucketName)
         .remove([file.file_path]);
 
       if (storageError) throw storageError;

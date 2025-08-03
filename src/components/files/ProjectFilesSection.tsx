@@ -18,10 +18,11 @@ export function ProjectFilesSection({ projectId }: ProjectFilesSectionProps) {
       </div>
 
       <Tabs defaultValue="stems" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="stems">Stems</TabsTrigger>
           <TabsTrigger value="mixes">Mixes</TabsTrigger>
           <TabsTrigger value="references">References</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
         </TabsList>
 
@@ -52,6 +53,16 @@ export function ProjectFilesSection({ projectId }: ProjectFilesSectionProps) {
             title="References"
             allowedTypes={['.wav', '.aiff', '.flac', '.mp3', '.mp4', '.mov']}
             maxSize={100}
+          />
+        </TabsContent>
+
+        <TabsContent value="sessions" className="space-y-4">
+          <FileUploadZone
+            projectId={projectId}
+            category="sessions"
+            title="Session Files"
+            allowedTypes={['.wav', '.aiff', '.flac', '.mp3', '.ptx', '.logic', '.als']}
+            maxSize={1000}
           />
         </TabsContent>
 
