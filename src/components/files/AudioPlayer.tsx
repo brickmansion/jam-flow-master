@@ -54,6 +54,24 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
     };
   }, [audioUrl]);
 
+  // Auto-play when audio URL becomes available and user intended to play
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audioUrl && audio && hasInitialized && isLoading === false) {
+      // If we just got the audio URL and user clicked play, start playing
+      const playAudio = async () => {
+        try {
+          await audio.play();
+        } catch (error) {
+          console.error('Auto-play error:', error);
+        }
+      };
+      
+      // Small delay to ensure audio is ready
+      setTimeout(playAudio, 100);
+    }
+  }, [audioUrl, hasInitialized, isLoading]);
+
   const initializeAudio = async () => {
     console.log('Initializing audio for fileKey:', fileKey);
     if (hasInitialized || isTooLarge) return;
@@ -83,6 +101,7 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
     if (!hasInitialized) {
       console.log('Initializing audio...');
       await initializeAudio();
+      // Don't return - let the auto-play effect handle playing
       return;
     }
     
@@ -191,7 +210,8 @@ export function AudioPlayer({ fileKey, sizeMb, fileName }: AudioPlayerProps) {
         <audio
           ref={audioRef}
           src={audioUrl}
-          preload="none"
+          preload="metadata"
+          crossOrigin="anonymous"
         />
       )}
       
