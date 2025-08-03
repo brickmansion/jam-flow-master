@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import {
   Form,
   FormControl,
@@ -16,8 +16,6 @@ import {
 } from '@/components/ui/form';
 import { useUserProfile, UserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Save } from 'lucide-react';
 
 const editProfileSchema = z.object({
@@ -27,7 +25,6 @@ const editProfileSchema = z.object({
   bio: z.string()
     .max(280, 'Bio must be less than 280 characters')
     .optional(),
-  role: z.enum(['producer', 'assistant', 'artist']),
 });
 
 type EditProfileForm = z.infer<typeof editProfileSchema>;
@@ -39,7 +36,6 @@ interface EditProfileFormProps {
 
 export function EditProfileForm({ profile, onSave }: EditProfileFormProps) {
   const { updateProfile } = useUserProfile();
-  const { profile: authProfile } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<EditProfileForm>({
@@ -47,28 +43,15 @@ export function EditProfileForm({ profile, onSave }: EditProfileFormProps) {
     defaultValues: {
       display_name: profile?.display_name || '',
       bio: profile?.bio || '',
-      role: (authProfile?.role || 'producer') as 'producer' | 'assistant' | 'artist',
     },
   });
 
   const onSubmit = async (data: EditProfileForm) => {
     try {
-      // Update profile data
       await updateProfile({
         display_name: data.display_name,
         bio: data.bio || null,
       });
-
-      // Update user role in auth metadata if it changed
-      if (data.role !== authProfile?.role) {
-        const { error: roleError } = await supabase.auth.updateUser({
-          data: { role: data.role }
-        });
-        
-        if (roleError) {
-          throw roleError;
-        }
-      }
 
       toast({
         title: "Profile updated",
@@ -76,11 +59,6 @@ export function EditProfileForm({ profile, onSave }: EditProfileFormProps) {
       });
 
       onSave();
-      
-      // Refresh the page to update the auth profile context
-      if (data.role !== authProfile?.role) {
-        window.location.reload();
-      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -128,29 +106,6 @@ export function EditProfileForm({ profile, onSave }: EditProfileFormProps) {
                 <div className="text-xs text-muted-foreground">
                   {field.value?.length || 0}/280 characters
                 </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Role *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="producer">Producer</SelectItem>
-                    <SelectItem value="assistant">Assistant</SelectItem>
-                    <SelectItem value="artist">Artist</SelectItem>
-                  </SelectContent>
-                </Select>
                 <FormMessage />
               </FormItem>
             )}

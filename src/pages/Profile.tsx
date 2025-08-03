@@ -40,7 +40,6 @@ export default function Profile() {
   };
 
   const displayName = profile?.display_name || user?.email?.split('@')[0] || 'User';
-  const userRole = authProfile?.role || 'Producer';
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -85,12 +84,9 @@ export default function Profile() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div>
                     <h1 className="text-3xl font-bold text-foreground">{displayName}</h1>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="secondary" className="bg-primary/10 text-primary">
-                        <User className="h-3 w-3 mr-1" />
-                        {userRole}
-                      </Badge>
-                    </div>
+                    <p className="text-muted-foreground mt-2">
+                      Your role is assigned per project when you join or create them
+                    </p>
                   </div>
                   
                   <Drawer open={isEditOpen} onOpenChange={setIsEditOpen}>
