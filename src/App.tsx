@@ -9,6 +9,7 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./components/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
+import { CollectionDetail } from "./pages/CollectionDetail";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -50,6 +51,11 @@ function App() {
                 <Route path="/projects/:id" element={
                   <ProtectedRoute>
                     <ProjectDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="/collections/:id" element={
+                  <ProtectedRoute>
+                    <CollectionDetail />
                   </ProtectedRoute>
                 } />
                 <Route path="/profile" element={

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,7 @@ interface NewProjectModalProps {
     bpm: number;
     sample_rate: number;
     song_key: string;
+    collection_id?: string | null;
   }) => Promise<void>;
 }
 
@@ -31,13 +32,36 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [dueDate, setDueDate] = useState<Date>();
+  const [collections, setCollections] = useState<Array<{id: string, title: string}>>([]);
   const [formData, setFormData] = useState({
     title: '',
     artist: '',
     bpm: '',
     song_key: 'C major',
-    sample_rate: '48000'
+    sample_rate: '48000',
+    collection_id: ''
   });
+
+  useEffect(() => {
+    if (open && user?.id !== 'demo-user-id') {
+      fetchCollections();
+    }
+  }, [open, user]);
+
+  const fetchCollections = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('collections')
+        .select('id, title')
+        .eq('producer_id', user?.id)
+        .order('title');
+
+      if (error) throw error;
+      setCollections(data || []);
+    } catch (error) {
+      console.error('Error fetching collections:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +112,8 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
         due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
         bpm,
         sample_rate: sampleRate,
-        song_key: formData.song_key
+        song_key: formData.song_key,
+        collection_id: formData.collection_id || null
       };
 
       // Call the parent component's project creation handler
@@ -96,7 +121,7 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
       
       // Close modal and reset form
       onOpenChange(false);
-      setFormData({ title: '', artist: '', bpm: '', song_key: 'C major', sample_rate: '48000' });
+      setFormData({ title: '', artist: '', bpm: '', song_key: 'C major', sample_rate: '48000', collection_id: '' });
       setDueDate(undefined);
     } catch (error: any) {
       toast({
@@ -210,6 +235,26 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
                 <SelectItem value="B♭ minor">B♭ minor</SelectItem>
                 <SelectItem value="B major">B major</SelectItem>
                 <SelectItem value="B minor">B minor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="collection">Collection (Optional)</Label>
+            <Select
+              value={formData.collection_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, collection_id: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a collection" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No collection</SelectItem>
+                {collections.map((collection) => (
+                  <SelectItem key={collection.id} value={collection.id}>
+                    {collection.title}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

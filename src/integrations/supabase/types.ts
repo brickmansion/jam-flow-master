@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      collections: {
+        Row: {
+          artist: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          producer_id: string
+          release_type: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          artist?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          producer_id: string
+          release_type?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          artist?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          producer_id?: string
+          release_type?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       project_members: {
         Row: {
           accepted_at: string | null
@@ -59,6 +92,7 @@ export type Database = {
         Row: {
           artist: string
           bpm: number
+          collection_id: string | null
           created_at: string
           due_date: string | null
           id: string
@@ -71,6 +105,7 @@ export type Database = {
         Insert: {
           artist: string
           bpm: number
+          collection_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
@@ -83,6 +118,7 @@ export type Database = {
         Update: {
           artist?: string
           bpm?: number
+          collection_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
@@ -92,7 +128,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {

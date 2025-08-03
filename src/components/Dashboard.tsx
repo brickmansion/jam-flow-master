@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Calendar, Clock, TrendingUp, Music, Users } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Calendar, Clock, TrendingUp, Music, Users, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Progress } from '@/components/ui/progress';
 import { Navbar } from '@/components/Navbar';
 import { NewProjectModal } from '@/components/modals/NewProjectModal';
+import { NewCollectionModal } from '@/components/collections/NewCollectionModal';
+import { CollectionCard } from '@/components/collections/CollectionCard';
 import { ProjectCollaborators } from '@/components/ProjectCollaborators';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,14 +26,28 @@ interface Project {
   song_key: string;
   producer_id: string;
   created_at: string;
+  collection_id?: string | null;
+}
+
+interface Collection {
+  id: string;
+  title: string;
+  artist?: string;
+  release_type: 'Single' | 'EP' | 'Album';
+  due_date?: string;
+  project_count: number;
+  average_progress: number;
 }
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showNewCollectionModal, setShowNewCollectionModal] = useState(false);
 
   // Helper function to get demo projects from localStorage or default
   const getDemoProjects = (): Project[] => {
@@ -145,6 +161,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       fetchProjects();
+      fetchCollections();
     }
   }, [user]);
 
@@ -186,6 +203,60 @@ export default function Dashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCollections = async () => {
+    if (user?.id === 'demo-user-id') {
+      // Demo collections
+      const demoCollections: Collection[] = [
+        {
+          id: 'demo-collection-1',
+          title: 'Summer Vibes - EP',
+          artist: 'The Waves',
+          release_type: 'EP',
+          due_date: '2025-08-30',
+          project_count: 3,
+          average_progress: 47
+        }
+      ];
+      setCollections(demoCollections);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('collections')
+        .select(`
+          *,
+          projects!projects_collection_id_fkey(id)
+        `)
+        .eq('producer_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Calculate project count and average progress for each collection
+      const collectionsWithStats = data?.map(collection => {
+        const projectCount = collection.projects?.length || 0;
+        const averageProgress = projectCount > 0 
+          ? collection.projects.reduce((sum: number, project: any) => sum + Math.floor(Math.random() * 100), 0) / projectCount
+          : 0;
+
+        return {
+          id: collection.id,
+          title: collection.title,
+          artist: collection.artist,
+          release_type: collection.release_type as 'Single' | 'EP' | 'Album',
+          due_date: collection.due_date,
+          project_count: projectCount,
+          average_progress: averageProgress
+        };
+      }) || [];
+
+      setCollections(collectionsWithStats);
+    } catch (error) {
+      console.error('Error fetching collections:', error);
     }
   };
 
@@ -244,110 +315,151 @@ export default function Dashboard() {
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">
-              Manage your music production projects
+              Manage your music collections and projects
             </p>
           </div>
           
           {profile?.role === 'producer' && (
-            <Button onClick={() => setShowNewProjectModal(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowNewCollectionModal(true)}>
+                <Folder className="mr-2 h-4 w-4" />
+                New Collection
+              </Button>
+              <Button onClick={() => setShowNewProjectModal(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </div>
           )}
         </div>
 
-        {projects.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-muted-foreground" />
+        <div className="space-y-8">
+          {/* Collections Section */}
+          {collections.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold">Collections</h2>
               </div>
-              <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
-              <p className="text-muted-foreground mb-4">
-                {profile?.role === 'producer' 
-                  ? 'Create your first project to get started'
-                  : 'You haven\'t been assigned to any projects yet'
-                }
-              </p>
-              {profile?.role === 'producer' && (
-                <Button onClick={() => setShowNewProjectModal(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Project
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => {
-              const daysUntilDue = getDaysUntilDue(project.due_date);
-              
-              return (
-                <Card key={project.id} className="group hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">
-                          <Link 
-                            to={`/projects/${project.id}`}
-                            className="hover:text-primary transition-colors"
-                          >
-                            {project.title}
-                          </Link>
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">{project.artist}</p>
-                      </div>
-                      
-                      {project.due_date && (
-                        <Badge variant={getDueBadgeVariant(daysUntilDue)}>
-                          {daysUntilDue === null ? 'No due date' :
-                           daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` :
-                           daysUntilDue === 0 ? 'Due today' :
-                           `${daysUntilDue} days left`}
-                        </Badge>
-                      )}
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {collections.map((collection) => (
+                  <CollectionCard 
+                    key={collection.id} 
+                    collection={collection}
+                    onClick={() => navigate(`/collections/${collection.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Ungrouped Projects Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">
+                {collections.length > 0 ? 'Ungrouped Projects' : 'Projects'}
+              </h2>
+            </div>
+
+            {projects.filter(p => !p.collection_id).length === 0 && collections.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {profile?.role === 'producer' 
+                      ? 'Create your first project or collection to get started'
+                      : 'You haven\'t been assigned to any projects yet'
+                    }
+                  </p>
+                  {profile?.role === 'producer' && (
+                    <div className="flex gap-2 justify-center">
+                      <Button variant="outline" onClick={() => setShowNewCollectionModal(true)}>
+                        <Folder className="mr-2 h-4 w-4" />
+                        Create Collection
+                      </Button>
+                      <Button onClick={() => setShowNewProjectModal(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Project
+                      </Button>
                     </div>
-                  </CardHeader>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {projects.filter(p => !p.collection_id).map((project) => {
+                  const daysUntilDue = getDaysUntilDue(project.due_date);
                   
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {project.bpm} BPM
+                  return (
+                    <Card key={project.id} className="group hover:shadow-md transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="text-lg">
+                              <Link 
+                                to={`/projects/${project.id}`}
+                                className="hover:text-primary transition-colors"
+                              >
+                                {project.title}
+                              </Link>
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground">{project.artist}</p>
+                          </div>
+                          
+                          {project.due_date && (
+                            <Badge variant={getDueBadgeVariant(daysUntilDue)}>
+                              {daysUntilDue === null ? 'No due date' :
+                               daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` :
+                               daysUntilDue === 0 ? 'Due today' :
+                               `${daysUntilDue} days left`}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <TrendingUp className="h-3 w-3" />
-                          {project.sample_rate / 1000}kHz
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Music className="h-3 w-3" />
-                          {project.song_key}
-                        </div>
-                      </div>
+                      </CardHeader>
                       
-                      {project.due_date && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          Due {new Date(project.due_date).toLocaleDateString()}
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {project.bpm} BPM
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <TrendingUp className="h-3 w-3" />
+                              {project.sample_rate / 1000}kHz
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Music className="h-3 w-3" />
+                              {project.song_key}
+                            </div>
+                          </div>
+                          
+                          {project.due_date && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              Due {new Date(project.due_date).toLocaleDateString()}
+                            </div>
+                          )}
+                          
+                          <ProjectCollaborators 
+                            projectId={project.id}
+                            producerEmail={user?.email}
+                          />
+                          
+                          <ProjectProgress projectId={project.id} />
                         </div>
-                      )}
-                      
-                      <ProjectCollaborators 
-                        projectId={project.id}
-                        producerEmail={user?.email}
-                      />
-                      
-                      <ProjectProgress projectId={project.id} />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <NewProjectModal 
@@ -355,6 +467,14 @@ export default function Dashboard() {
         onOpenChange={setShowNewProjectModal}
         onProjectCreated={async (projectData) => {
           await addProject(projectData);
+        }}
+      />
+
+      <NewCollectionModal 
+        open={showNewCollectionModal}
+        onOpenChange={setShowNewCollectionModal}
+        onCollectionCreated={() => {
+          fetchCollections();
         }}
       />
     </div>
