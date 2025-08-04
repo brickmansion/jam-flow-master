@@ -168,49 +168,20 @@ export function FileUploadZone({
         
         console.log('Uploading to storage:', { bucketName, fileName, fileSize: file.size });
         
-        // Upload with progress tracking
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          
-          // Track upload progress
-          xhr.upload.addEventListener('progress', (event) => {
-            if (event.lengthComputable) {
-              const fileProgress = (event.loaded / event.total) * 80; // 80% of total progress for upload
-              setUploadProgress(baseProgress + fileProgress);
-            }
+        // Simple progress updates during upload
+        setUploadProgress(baseProgress + 10);
+        
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
           });
 
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              console.log('Storage upload successful');
-              resolve();
-            } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
-          });
-
-          xhr.addEventListener('error', () => {
-            reject(new Error('Upload failed'));
-          });
-
-          xhr.addEventListener('timeout', () => {
-            reject(new Error('Upload timed out'));
-          });
-
-          // Get session for authorization
-          supabase.auth.getSession().then(({ data: session }) => {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            xhr.open('POST', `https://ayqvnclmnepqyhvjqxjy.supabase.co/storage/v1/object/${bucketName}/${fileName}`);
-            xhr.setRequestHeader('Authorization', `Bearer ${session.session?.access_token}`);
-            xhr.setRequestHeader('x-upsert', 'false');
-            xhr.setRequestHeader('cache-control', '3600');
-            xhr.timeout = 300000; // 5 minute timeout
-            
-            xhr.send(formData);
-          }).catch(reject);
-        });
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw uploadError;
+        }
 
         console.log('Storage upload successful, saving to database...');
         
