@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Music, User, Settings, LogOut, Palette } from 'lucide-react';
+import { Music, User, Settings, LogOut, Palette, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,20 +13,20 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from 'next-themes';
 import { CommandPalette } from '@/components/CommandPalette';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 interface NavbarProps {
   title?: string;
-  isDemoMode?: boolean;
 }
 
-export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) {
+export function Navbar({ title = 'SeshPrep' }: NavbarProps) {
   const { user, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [isCommandOpen, setIsCommandOpen] = useState(false);
-  
-  // Check if user is in demo mode
-  const isDemo = user?.id === 'demo-user-id' || isDemoMode;
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const { workspace, isTrialActive, trialDaysLeft, isProAccess } = useWorkspace();
 
   const handleSignOut = async () => {
     await signOut();
@@ -65,10 +65,10 @@ export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) 
             />
           </Link>
 
-          {/* Demo Mode Badge */}
-          {isDemo && (
+          {/* Trial Status Badge */}
+          {user && isTrialActive && (
             <Badge variant="secondary" className="ml-4 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-              Demo Mode
+              Trial: {trialDaysLeft} days left
             </Badge>
           )}
 
@@ -128,12 +128,13 @@ export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) 
               </>
             )}
 
-            {isDemo && (
+            {user && !isProAccess && (
               <Button 
-                asChild 
-                className="bg-primary hover:bg-primary/90"
+                onClick={() => setUpgradeModalOpen(true)}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
               >
-                <Link to="/auth">Sign Up to Start Real Projects</Link>
+                <Crown className="mr-2 h-4 w-4" />
+                Upgrade to Pro
               </Button>
             )}
           </div>
@@ -141,6 +142,7 @@ export function Navbar({ title = 'SeshPrep', isDemoMode = false }: NavbarProps) 
       </nav>
 
       <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} />
+      <UpgradeModal open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen} />
     </>
   );
 }
