@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Upload, File, X, Download, Trash2, MoreHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { File, Download, Trash2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AudioPlayer } from './AudioPlayer';
-import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Database } from '@/integrations/supabase/types';
+
+import Uppy from '@uppy/core';
+import Tus from '@uppy/tus';
+import { Dashboard } from '@uppy/react';
+
+import '@uppy/core/dist/style.min.css';
+import '@uppy/dashboard/dist/style.min.css';
 
 type FileUpload = Database['public']['Tables']['file_uploads']['Row'];
 
@@ -32,14 +36,12 @@ export function FileUploadZone({
   maxSize = 100 
 }: FileUploadZoneProps) {
   const [files, setFiles] = useState<FileUpload[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [currentUploadFile, setCurrentUploadFile] = useState<string>('');
-  const [dragOver, setDragOver] = useState(false);
-  const [description, setDescription] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useUserProfile();
+  const uppyRef = useRef<Uppy | null>(null);
 
   // Allow all users to upload for now
   const canUpload = true;
@@ -47,6 +49,131 @@ export function FileUploadZone({
   useEffect(() => {
     fetchFiles();
   }, [projectId, category]);
+
+  useEffect(() => {
+    if (!user || !canUpload) return;
+
+    const getNextVersion = async () => {
+      const { data: versionData } = await supabase
+        .rpc('get_next_file_version', {
+          p_project_id: projectId,
+          p_category: category
+        });
+      return versionData || 1;
+    };
+
+    const uppy = new Uppy({
+      autoProceed: false,
+      restrictions: {
+        maxFileSize: maxSize * 1024 * 1024,
+        allowedFileTypes: allowedTypes.includes('*') ? null : allowedTypes,
+      }
+    }).use(Tus, {
+      endpoint: `https://ayqvnclmnepqyhvjqxjy.supabase.co/storage/v1/upload/resumable`,
+      headers: {
+        'x-upsert': 'false'
+      },
+      onBeforeRequest: async (req) => {
+        const { data: session } = await supabase.auth.getSession();
+        req.setHeader('authorization', `Bearer ${session.session?.access_token || ''}`);
+        req.setHeader('bucketName', category === 'sessions' ? 'sessions' : 'project-files');
+        req.setHeader('objectName', `${projectId}/${category}/${Date.now()}-${crypto.randomUUID()}`);
+        req.setHeader('contentType', 'application/octet-stream');
+        req.setHeader('cacheControl', '3600');
+      },
+      retryDelays: [0, 1000, 3000, 5000],
+      limit: 1
+    });
+
+    uppy.on('upload-progress', (file, progress) => {
+      if (file && progress) {
+        setCurrentUploadFile(file.name);
+        setUploadProgress(progress.percentage || 0);
+      }
+    });
+
+    uppy.on('upload-success', async (file, response) => {
+      try {
+        console.log('Upload successful:', file?.name, response);
+        
+        if (!file || !response?.uploadURL) {
+          throw new Error('Invalid upload response');
+        }
+
+        // Extract file path from upload URL
+        const url = new URL(response.uploadURL);
+        const filePath = url.pathname.replace('/storage/v1/object/', '');
+        
+        // Get next version number
+        const { data: versionData } = await supabase
+          .rpc('get_next_file_version', {
+            p_project_id: projectId,
+            p_category: category
+          });
+
+        const nextVersion = versionData || 1;
+        
+        // Get description from meta data
+        const description = file.meta?.description || null;
+
+        // Save metadata to database
+        const { error: dbError } = await supabase
+          .from('file_uploads')
+          .insert({
+            project_id: projectId,
+            uploaded_by: user.id,
+            filename: filePath,
+            original_filename: file.name,
+            file_path: filePath,
+            file_size: file.size || 0,
+            mime_type: file.type || 'application/octet-stream',
+            category,
+            version: nextVersion,
+            description: description as string | null
+          });
+
+        if (dbError) {
+          console.error('Database insert error:', dbError);
+          throw dbError;
+        }
+
+        toast({
+          title: "Upload successful",
+          description: `${file.name} uploaded successfully`
+        });
+
+      } catch (error) {
+        console.error('Post-upload error:', error);
+        toast({
+          title: "Upload failed",
+          description: error instanceof Error ? error.message : "Failed to save file metadata",
+          variant: "destructive"
+        });
+      }
+    });
+
+    uppy.on('upload-error', (file, error) => {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: `Failed to upload ${file?.name || 'file'}`,
+        variant: "destructive"
+      });
+    });
+
+    uppy.on('complete', (result) => {
+      console.log('Upload complete:', result);
+      setCurrentUploadFile('');
+      setUploadProgress(0);
+      fetchFiles();
+    });
+
+    uppyRef.current = uppy;
+
+    return () => {
+      uppy.destroy();
+    };
+  }, [user, projectId, category, maxSize, allowedTypes, canUpload, toast]);
 
   const fetchFiles = async () => {
     try {
@@ -66,213 +193,6 @@ export function FileUploadZone({
         description: "Failed to load files",
         variant: "destructive"
       });
-    }
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    
-    console.log('Drop event triggered');
-    
-    if (!canUpload) {
-      toast({
-        title: "Premium feature",
-        description: "File uploads require a premium account",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    console.log('Dropped files:', droppedFiles.map(f => ({ name: f.name, type: f.type, size: f.size })));
-    console.log('Allowed types:', allowedTypes);
-    uploadFiles(droppedFiles);
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('File input triggered');
-    
-    if (!canUpload) {
-      toast({
-        title: "Premium feature",
-        description: "File uploads require a premium account",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const selectedFiles = Array.from(e.target.files || []);
-    uploadFiles(selectedFiles);
-  };
-
-  const uploadFiles = async (filesToUpload: File[]) => {
-    if (!user) {
-      console.log('No user found, cannot upload');
-      return;
-    }
-
-    console.log('Starting upload process for files:', filesToUpload.map(f => f.name));
-    setUploading(true);
-    setUploadProgress(0);
-    setCurrentUploadFile('');
-
-    try {
-      console.log('Getting next version number...');
-      // Get next version number
-      const { data: versionData, error: versionError } = await supabase
-        .rpc('get_next_file_version', {
-          p_project_id: projectId,
-          p_category: category
-        });
-
-      if (versionError) {
-        console.error('Version error:', versionError);
-        throw versionError;
-      }
-
-      const nextVersion = versionData || 1;
-      console.log('Next version:', nextVersion);
-
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const file = filesToUpload[i];
-        console.log('Processing file:', file.name);
-        setCurrentUploadFile(file.name);
-        setUploadProgress((i / filesToUpload.length) * 100);
-        
-        // PHASE 3: Enhanced file validation using edge function
-        try {
-          console.log('Validating file with edge function...');
-          const validationTimeout = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Validation timeout')), 10000)
-          );
-          
-          const validationPromise = supabase.functions.invoke(
-            'validate-file-upload',
-            {
-              body: {
-                fileName: file.name,
-                fileSize: file.size,
-                mimeType: file.type,
-                category: category
-              }
-            }
-          );
-
-          const { data: validationResult, error: validationError } = await Promise.race([
-            validationPromise,
-            validationTimeout
-          ]) as any;
-
-          console.log('Validation result:', validationResult, 'Error:', validationError);
-
-          if (validationError || !validationResult?.valid) {
-            console.error('File validation failed:', validationResult?.error || validationError?.message);
-            toast({
-              title: "File validation failed",
-              description: validationResult?.error || validationError?.message || "File validation failed",
-              variant: "destructive"
-            });
-            continue;
-          }
-        } catch (validationErr) {
-          console.error('Validation error (skipping validation):', validationErr);
-          // Skip validation and continue with upload if validation fails
-          console.log('Continuing without edge function validation');
-        }
-
-        // Legacy client-side validation as fallback
-        if (file.size > maxSize * 1024 * 1024) {
-          console.log('File too large:', file.name, file.size);
-          toast({
-            title: "File too large",
-            description: `${file.name} exceeds ${maxSize}MB limit`,
-            variant: "destructive"
-          });
-          continue;
-        }
-
-        // Generate secure file path with UUID prefix (PHASE 5: File-path sanitization)
-        const secureFileName = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const fileName = `${projectId}/${category}/${nextVersion}-${secureFileName}`;
-        const bucketName = category === 'sessions' ? 'sessions' : 'project-files';
-        
-        console.log('Uploading to storage:', { bucketName, fileName, fileSize: file.size });
-        
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Storage upload error:', uploadError);
-          throw uploadError;
-        }
-
-        console.log('Storage upload successful, saving to database...');
-
-        // Save metadata to database
-        const { error: dbError } = await supabase
-          .from('file_uploads')
-          .insert({
-            project_id: projectId,
-            uploaded_by: user.id,
-            filename: fileName,
-            original_filename: file.name,
-            file_path: fileName,
-            file_size: file.size,
-            mime_type: file.type,
-            category,
-            version: nextVersion,
-            description: description || null
-          });
-
-        if (dbError) {
-          console.error('Database insert error:', dbError);
-          throw dbError;
-        }
-
-        console.log('File processed successfully:', file.name);
-      }
-
-      setUploadProgress(100);
-      console.log('All files uploaded successfully');
-      toast({
-        title: "Upload successful",
-        description: `${filesToUpload.length} file(s) uploaded as version ${nextVersion}`
-      });
-
-      setDescription('');
-      fetchFiles();
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload files. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      console.log('Upload process completed, setting uploading to false');
-      setUploading(false);
-      setUploadProgress(0);
-      setCurrentUploadFile('');
     }
   };
 
@@ -355,75 +275,24 @@ export function FileUploadZone({
       </div>
 
       {/* Upload Zone */}
-      {canUpload && (
+      {canUpload && uppyRef.current && (
         <Card>
           <CardContent className="p-6">
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragOver
-                  ? 'border-primary bg-primary/5'
-                  : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-              }`}
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-lg font-medium mb-2">
-                {category === 'sessions' 
-                  ? 'Upload or drag-and-drop Pro Tools sessions' 
-                  : 'Drop files here or click to browse'
-                }
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                {category === 'sessions' 
-                  ? `Files are resumable up to ${Math.floor(maxSize/1000)}GB` 
-                  : `Maximum file size: ${maxSize}MB`
-                }
-                {allowedTypes.length > 0 && !allowedTypes.includes('*') && (
-                  <span className="block">
-                    Allowed types: {allowedTypes.join(', ')}
-                  </span>
-                )}
-              </p>
-              
-              <div className="space-y-4">
-                <Textarea
-                  placeholder={category === 'sessions' 
+            <Dashboard 
+              uppy={uppyRef.current}
+              proudlyDisplayPoweredByUppy={false}
+              note={`Max file size: ${maxSize}MB ${category === 'sessions' ? '(resumable uploads)' : ''}`}
+              height={320}
+              metaFields={[
+                { 
+                  id: 'description', 
+                  name: 'Description', 
+                  placeholder: category === 'sessions' 
                     ? "Optional notes (e.g., 'Full session copy-in')" 
                     : "Add a description for this upload (optional)"
-                  }
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="max-w-md mx-auto"
-                />
-                
-                {uploading && (
-                  <div className="max-w-md mx-auto space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Uploading: {currentUploadFile}</span>
-                      <span>{Math.round(uploadProgress)}%</span>
-                    </div>
-                    <Progress value={uploadProgress} className="w-full" />
-                  </div>
-                )}
-                
-                <Button asChild disabled={uploading}>
-                  <label className="cursor-pointer">
-                    {uploading ? 'Uploading...' : 
-                     category === 'sessions' ? 'Select Session File' : 'Select Files'}
-                    <input
-                      type="file"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileInput}
-                      accept={allowedTypes.includes('*') ? undefined : allowedTypes.join(',')}
-                    />
-                  </label>
-                </Button>
-              </div>
-            </div>
+                }
+              ]}
+            />
           </CardContent>
         </Card>
       )}
@@ -432,7 +301,7 @@ export function FileUploadZone({
       {!canUpload && (
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="p-6 text-center">
-            <Upload className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+            <File className="h-12 w-12 text-orange-500 mx-auto mb-4" />
             <p className="text-lg font-medium text-orange-900 mb-2">
               Premium Feature
             </p>
