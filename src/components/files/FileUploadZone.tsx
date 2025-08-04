@@ -115,11 +115,16 @@ export function FileUploadZone({
   };
 
   const uploadFiles = async (filesToUpload: File[]) => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, cannot upload');
+      return;
+    }
 
+    console.log('Starting upload process for files:', filesToUpload.map(f => f.name));
     setUploading(true);
 
     try {
+      console.log('Getting next version number...');
       // Get next version number
       const { data: versionData, error: versionError } = await supabase
         .rpc('get_next_file_version', {
@@ -127,13 +132,20 @@ export function FileUploadZone({
           p_category: category
         });
 
-      if (versionError) throw versionError;
+      if (versionError) {
+        console.error('Version error:', versionError);
+        throw versionError;
+      }
 
       const nextVersion = versionData || 1;
+      console.log('Next version:', nextVersion);
 
       for (const file of filesToUpload) {
+        console.log('Processing file:', file.name);
+        
         // PHASE 3: Enhanced file validation using edge function
         try {
+          console.log('Validating file with edge function...');
           const { data: validationResult, error: validationError } = await supabase.functions.invoke(
             'validate-file-upload',
             {
@@ -146,7 +158,10 @@ export function FileUploadZone({
             }
           );
 
+          console.log('Validation result:', validationResult, 'Error:', validationError);
+
           if (validationError || !validationResult?.valid) {
+            console.error('File validation failed:', validationResult?.error || validationError?.message);
             toast({
               title: "File validation failed",
               description: validationResult?.error || validationError?.message || "File validation failed",
@@ -166,6 +181,7 @@ export function FileUploadZone({
 
         // Legacy client-side validation as fallback
         if (file.size > maxSize * 1024 * 1024) {
+          console.log('File too large:', file.name, file.size);
           toast({
             title: "File too large",
             description: `${file.name} exceeds ${maxSize}MB limit`,
@@ -179,6 +195,8 @@ export function FileUploadZone({
         const fileName = `${projectId}/${category}/${nextVersion}-${secureFileName}`;
         const bucketName = category === 'sessions' ? 'sessions' : 'project-files';
         
+        console.log('Uploading to storage:', { bucketName, fileName, fileSize: file.size });
+        
         const { error: uploadError } = await supabase.storage
           .from(bucketName)
           .upload(fileName, file, {
@@ -186,7 +204,12 @@ export function FileUploadZone({
             upsert: false
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw uploadError;
+        }
+
+        console.log('Storage upload successful, saving to database...');
 
         // Save metadata to database
         const { error: dbError } = await supabase
@@ -204,9 +227,15 @@ export function FileUploadZone({
             description: description || null
           });
 
-        if (dbError) throw dbError;
+        if (dbError) {
+          console.error('Database insert error:', dbError);
+          throw dbError;
+        }
+
+        console.log('File processed successfully:', file.name);
       }
 
+      console.log('All files uploaded successfully');
       toast({
         title: "Upload successful",
         description: `${filesToUpload.length} file(s) uploaded as version ${nextVersion}`
@@ -218,10 +247,11 @@ export function FileUploadZone({
       console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload files. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload files. Please try again.",
         variant: "destructive"
       });
     } finally {
+      console.log('Upload process completed, setting uploading to false');
       setUploading(false);
     }
   };
