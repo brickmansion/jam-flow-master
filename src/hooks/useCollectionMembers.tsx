@@ -78,6 +78,10 @@ export function useCollectionMembers(collectionId: string) {
 
       // Send invitation email
       try {
+        console.log('Attempting to send invitation email to:', email);
+        console.log('Collection data:', collectionData);
+        console.log('User:', user);
+        
         const emailResponse = await supabase.functions.invoke('send-invite-email', {
           body: {
             email: email.toLowerCase().trim(),
@@ -88,11 +92,15 @@ export function useCollectionMembers(collectionId: string) {
           },
         });
 
+        console.log('Email response:', emailResponse);
+        
         if (emailResponse.error) {
           console.warn('Email sending failed:', emailResponse.error);
+        } else {
+          console.log('Email sent successfully');
         }
       } catch (emailError) {
-        console.warn('Failed to send invitation email:', emailError);
+        console.error('Failed to send invitation email:', emailError);
         // Don't fail the invitation if email fails
       }
 

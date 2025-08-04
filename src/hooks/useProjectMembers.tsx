@@ -146,6 +146,10 @@ export function useProjectMembers(projectId: string) {
 
       // Send invitation email
       try {
+        console.log('Project: Attempting to send invitation email to:', email);
+        console.log('Project data:', projectData);
+        console.log('User:', user);
+        
         const emailResponse = await supabase.functions.invoke('send-invite-email', {
           body: {
             email: email.toLowerCase().trim(),
@@ -155,6 +159,8 @@ export function useProjectMembers(projectId: string) {
             projectId: projectId,
           },
         });
+
+        console.log('Project email response:', emailResponse);
 
         if (emailResponse.error) {
           console.error('Error sending invitation email:', emailResponse.error);
