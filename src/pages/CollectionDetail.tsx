@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Plus, Calendar, Folder } from 'lucide-react';
 import { AddProjectModal } from '@/components/collections/AddProjectModal';
+
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +19,7 @@ interface Collection {
   release_type: 'Single' | 'EP' | 'Album';
   due_date?: string;
   created_at: string;
+  producer_id: string;
 }
 
 interface Project {
@@ -283,6 +285,13 @@ export const CollectionDetail = () => {
             </div>
           )}
         </div>
+
+        {/* Collection Collaborators Section will be enabled after migration */}
+        {/* <CollectionCollaboratorsSection 
+          collectionId={id!}
+          producerId={collection.producer_id}
+          producerEmail={user?.email}
+        /> */}
 
         <AddProjectModal
           open={showAddProjectModal}
