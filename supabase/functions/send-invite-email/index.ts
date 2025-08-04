@@ -29,7 +29,7 @@ serve(async (req: Request): Promise<Response> => {
     console.log('Sending invitation email to:', email, 'for project:', projectTitle);
 
     const emailResponse = await resend.emails.send({
-      from: "SeshPrep <onboarding@resend.dev>",
+      from: "SeshPrep <adam@sadbands.com>",
       to: [email],
       subject: `You've been invited to collaborate on "${projectTitle}"`,
       html: `
