@@ -48,20 +48,23 @@ export function useWorkspace() {
     try {
       setLoading(true);
       
-      // Get workspace
+      // Get workspace - use first() instead of single() to handle multiple rows
       const { data: workspaceData, error: workspaceError } = await supabase
         .from('workspaces')
         .select('*')
         .eq('owner_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (workspaceError && workspaceError.code !== 'PGRST116') {
+      if (workspaceError) {
         console.error('Error fetching workspace:', workspaceError);
         return;
       }
 
+      const existingWorkspace = workspaceData?.[0];
+
       // If no workspace exists, create one with trial
-      if (!workspaceData) {
+      if (!existingWorkspace) {
         const now = new Date();
         const trialExpires = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 days
 
@@ -84,20 +87,23 @@ export function useWorkspace() {
 
         setWorkspace(newWorkspace as Workspace);
       } else {
-        setWorkspace(workspaceData as Workspace);
+        setWorkspace(existingWorkspace as Workspace);
       }
 
       // Get storage usage
-      const { data: storageData, error: storageError } = await supabase
-        .from('workspace_storage_usage_gb')
-        .select('*')
-        .eq('workspace_id', workspaceData?.id || (await supabase.from('workspaces').select('id').eq('owner_id', user.id).single()).data?.id)
-        .single();
+      const workspaceId = existingWorkspace?.id;
+      if (workspaceId) {
+        const { data: storageData, error: storageError } = await supabase
+          .from('workspace_storage_usage_gb')
+          .select('*')
+          .eq('workspace_id', workspaceId)
+          .maybeSingle();
 
-      if (storageError && storageError.code !== 'PGRST116') {
-        console.error('Error fetching storage usage:', storageError);
-      } else if (storageData) {
-        setStorageUsage(storageData);
+        if (storageError) {
+          console.error('Error fetching storage usage:', storageError);
+        } else if (storageData) {
+          setStorageUsage(storageData);
+        }
       }
     } finally {
       setLoading(false);
