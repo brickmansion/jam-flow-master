@@ -78,7 +78,7 @@ export function useCollectionMembers(collectionId: string) {
 
       // Send invitation email
       try {
-        console.log('Attempting to send invitation email to:', email);
+        console.log('Collection: Attempting to send invitation email to:', email);
         console.log('Collection data:', collectionData);
         console.log('User:', user);
         
@@ -88,11 +88,11 @@ export function useCollectionMembers(collectionId: string) {
             projectTitle: `${collectionData?.title || 'Untitled Collection'} by ${collectionData?.artist || 'Unknown Artist'}`,
             role: role,
             inviterName: user?.email || 'A colleague',
-            projectId: collectionId, // Using collection ID as project ID for the email
+            projectId: collectionId, // Edge function expects projectId, using collection ID
           },
         });
 
-        console.log('Email response:', emailResponse);
+        console.log('Collection email response:', emailResponse);
         
         if (emailResponse.error) {
           console.warn('Email sending failed:', emailResponse.error);
