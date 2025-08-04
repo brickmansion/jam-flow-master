@@ -53,6 +53,13 @@ export function useCollectionMembers(collectionId: string) {
     if (!user) return { success: false, error: 'Not authenticated' };
 
     try {
+      // Get collection details for the email
+      const { data: collectionData } = await supabase
+        .from('collections')
+        .select('title, artist')
+        .eq('id', collectionId)
+        .single();
+
       const { error } = await supabase
         .from('collection_members')
         .insert({
@@ -67,6 +74,26 @@ export function useCollectionMembers(collectionId: string) {
           return { success: false, error: 'User is already a member of this collection' };
         }
         throw error;
+      }
+
+      // Send invitation email
+      try {
+        const emailResponse = await supabase.functions.invoke('send-invite-email', {
+          body: {
+            email: email.toLowerCase().trim(),
+            projectTitle: `${collectionData?.title || 'Untitled Collection'} by ${collectionData?.artist || 'Unknown Artist'}`,
+            role: role,
+            inviterName: user?.email || 'A colleague',
+            projectId: collectionId, // Using collection ID as project ID for the email
+          },
+        });
+
+        if (emailResponse.error) {
+          console.warn('Email sending failed:', emailResponse.error);
+        }
+      } catch (emailError) {
+        console.warn('Failed to send invitation email:', emailError);
+        // Don't fail the invitation if email fails
       }
 
       await fetchMembers();
