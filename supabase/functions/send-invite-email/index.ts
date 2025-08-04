@@ -116,7 +116,7 @@ serve(async (req: Request): Promise<Response> => {
     console.log('Sending invitation email to:', sanitizedEmail, 'for project:', sanitizedProjectTitle);
 
     const emailResponse = await resend.emails.send({
-      from: "noreply@yourdomain.com", // Replace with your verified domain
+      from: "adam@sadbands.com", // Use your verified email for testing
       to: [sanitizedEmail],
       subject: `You've been invited to collaborate on "${sanitizedProjectTitle}"`,
       html: `
