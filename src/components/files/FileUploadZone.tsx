@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AudioPlayer } from './AudioPlayer';
+import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Database } from '@/integrations/supabase/types';
@@ -32,6 +33,8 @@ export function FileUploadZone({
 }: FileUploadZoneProps) {
   const [files, setFiles] = useState<FileUpload[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentUploadFile, setCurrentUploadFile] = useState<string>('');
   const [dragOver, setDragOver] = useState(false);
   const [description, setDescription] = useState('');
   const { toast } = useToast();
@@ -122,6 +125,8 @@ export function FileUploadZone({
 
     console.log('Starting upload process for files:', filesToUpload.map(f => f.name));
     setUploading(true);
+    setUploadProgress(0);
+    setCurrentUploadFile('');
 
     try {
       console.log('Getting next version number...');
@@ -140,8 +145,11 @@ export function FileUploadZone({
       const nextVersion = versionData || 1;
       console.log('Next version:', nextVersion);
 
-      for (const file of filesToUpload) {
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
         console.log('Processing file:', file.name);
+        setCurrentUploadFile(file.name);
+        setUploadProgress((i / filesToUpload.length) * 100);
         
         // PHASE 3: Enhanced file validation using edge function
         try {
@@ -235,6 +243,7 @@ export function FileUploadZone({
         console.log('File processed successfully:', file.name);
       }
 
+      setUploadProgress(100);
       console.log('All files uploaded successfully');
       toast({
         title: "Upload successful",
@@ -253,6 +262,8 @@ export function FileUploadZone({
     } finally {
       console.log('Upload process completed, setting uploading to false');
       setUploading(false);
+      setUploadProgress(0);
+      setCurrentUploadFile('');
     }
   };
 
@@ -378,6 +389,16 @@ export function FileUploadZone({
                   onChange={(e) => setDescription(e.target.value)}
                   className="max-w-md mx-auto"
                 />
+                
+                {uploading && (
+                  <div className="max-w-md mx-auto space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Uploading: {currentUploadFile}</span>
+                      <span>{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="w-full" />
+                  </div>
+                )}
                 
                 <Button asChild disabled={uploading}>
                   <label className="cursor-pointer">
