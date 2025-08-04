@@ -7,7 +7,7 @@ import { Upload, File, Download, Trash2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { uploadWithProgress } from '@/utils/uploadWithProgress';
+import { uploadWithProgressResumable } from '@/utils/uploadWithProgress';
 import { AudioPlayer } from './AudioPlayer';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -38,6 +38,7 @@ export function FileUploadZone({
   const [currentUploadFile, setCurrentUploadFile] = useState<string>('');
   const [dragOver, setDragOver] = useState(false);
   const [description, setDescription] = useState('');
+  const [serverLimitMb, setServerLimitMb] = useState<number>();
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useUserProfile();
@@ -48,6 +49,15 @@ export function FileUploadZone({
 
   useEffect(() => {
     fetchFiles();
+    
+    // Fetch real server limits
+    (async () => {
+      const bucketName = category === 'sessions' ? 'sessions' : 'project-files';
+      const { data } = await supabase.storage.getBucket(bucketName);
+      if (data?.file_size_limit) {
+        setServerLimitMb(data.file_size_limit / (1024 * 1024));
+      }
+    })();
   }, [projectId, category]);
 
   const fetchFiles = async () => {
@@ -168,8 +178,8 @@ export function FileUploadZone({
         console.log('Uploading to storage:', { bucketName, fileName, fileSize: file.size });
         console.log('File size in MB:', (file.size / (1024 * 1024)).toFixed(2));
         
-        // Upload with progress tracking using XMLHttpRequest
-        await uploadWithProgress(bucketName, fileName, file, (pct) => {
+        // Upload with resumable progress tracking
+        await uploadWithProgressResumable(bucketName, fileName, file, (pct) => {
           setUploadProgress(
             ((i + pct / 100) / filesToUpload.length) * 100
           );
@@ -329,8 +339,8 @@ export function FileUploadZone({
               </p>
               <p className="text-sm text-muted-foreground mb-4">
                 {category === 'sessions' 
-                  ? `Files are resumable up to ${Math.floor(maxSize/1000)}GB` 
-                  : `Maximum file size: ${maxSize}MB`
+                  ? `Files are resumable up to ${Math.floor((serverLimitMb ?? maxSize)/1000)}GB` 
+                  : `Maximum file size: ${serverLimitMb ?? maxSize}MB`
                 }
                 {allowedTypes.length > 0 && !allowedTypes.includes('*') && (
                   <span className="block">
