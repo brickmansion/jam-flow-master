@@ -116,7 +116,7 @@ serve(async (req: Request): Promise<Response> => {
     console.log('Sending invitation email to:', sanitizedEmail, 'for project:', sanitizedProjectTitle);
 
     const emailResponse = await resend.emails.send({
-      from: "SeshPrep <onboarding@resend.dev>",
+      from: "onboarding@resend.dev",
       to: [sanitizedEmail],
       subject: `You've been invited to collaborate on "${sanitizedProjectTitle}"`,
       html: `
