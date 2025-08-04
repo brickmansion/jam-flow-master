@@ -88,6 +88,8 @@ export function FileUploadZone({
     e.preventDefault();
     setDragOver(false);
     
+    console.log('Drop event triggered');
+    
     if (!canUpload) {
       toast({
         title: "Premium feature",
@@ -104,6 +106,8 @@ export function FileUploadZone({
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File input triggered');
+    
     if (!canUpload) {
       toast({
         title: "Premium feature",
