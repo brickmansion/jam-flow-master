@@ -286,12 +286,8 @@ export const CollectionDetail = () => {
           )}
         </div>
 
-        {/* Collection Collaborators Section will be enabled after migration */}
-        {/* <CollectionCollaboratorsSection 
-          collectionId={id!}
-          producerId={collection.producer_id}
-          producerEmail={user?.email}
-        /> */}
+        {/* Collection Collaborators will be available after migration completes */}
+        {/* Waiting for Supabase types to update with collection_members table */}
 
         <AddProjectModal
           open={showAddProjectModal}
