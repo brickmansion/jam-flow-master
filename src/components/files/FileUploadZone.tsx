@@ -7,6 +7,7 @@ import { Upload, File, Download, Trash2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { uploadWithProgress } from '@/utils/uploadWithProgress';
 import { AudioPlayer } from './AudioPlayer';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -146,10 +147,6 @@ export function FileUploadZone({
         console.log('Processing file:', file.name);
         setCurrentUploadFile(file.name);
         
-        // Update progress for file processing
-        const baseProgress = (i / filesToUpload.length) * 100;
-        setUploadProgress(baseProgress);
-        
         // Basic client-side validation
         if (file.size > maxSize * 1024 * 1024) {
           console.log('File too large:', file.name, file.size);
@@ -169,40 +166,14 @@ export function FileUploadZone({
         console.log('Uploading to storage:', { bucketName, fileName, fileSize: file.size });
         console.log('File size in MB:', (file.size / (1024 * 1024)).toFixed(2));
         
-        // Simple progress updates during upload
-        setUploadProgress(baseProgress + 10);
-        
-        // Add debug logging for storage upload
-        console.log('Attempting storage upload with params:', {
-          bucket: bucketName,
-          path: fileName,
-          fileSize: file.size,
-          contentType: file.type
+        // Upload with progress tracking using XMLHttpRequest
+        await uploadWithProgress(bucketName, fileName, file, (pct) => {
+          setUploadProgress(
+            ((i + pct / 100) / filesToUpload.length) * 100
+          );
         });
-        
-        // Use standard upload for all files to avoid signed URL issues
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: file.type
-          });
-
-        console.log('Storage upload result:', { data: uploadData, error: uploadError });
-
-        if (uploadError) {
-          console.error('Storage upload error details:', {
-            message: uploadError.message,
-            error: uploadError
-          });
-          throw uploadError;
-        }
 
         console.log('Storage upload successful, saving to database...');
-        
-        // Update progress for database save
-        setUploadProgress(baseProgress + 85);
 
         // Save metadata to database
         const { error: dbError } = await supabase
@@ -226,9 +197,6 @@ export function FileUploadZone({
         }
 
         console.log('File processed successfully:', file.name);
-        
-        // Complete progress for this file
-        setUploadProgress(((i + 1) / filesToUpload.length) * 100);
       }
 
       console.log('All files uploaded successfully');
@@ -248,9 +216,11 @@ export function FileUploadZone({
       });
     } finally {
       console.log('Upload process completed, setting uploading to false');
-      setUploading(false);
-      setUploadProgress(0);
-      setCurrentUploadFile('');
+      setTimeout(() => {
+        setUploadProgress(0);
+        setCurrentUploadFile('');
+        setUploading(false);
+      }, 1000);
     }
   };
 
