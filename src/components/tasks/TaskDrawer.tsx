@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { validateTaskTitle, validateUrl, sanitizeTaskDescription } from '@/utils/inputValidation';
 
 interface TaskDrawerProps {
   open: boolean;
@@ -79,19 +80,22 @@ export function TaskDrawer({ open, onOpenChange, task, projectId, onTaskUpdate }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title.trim()) {
-      toast.error('Task title is required');
+    // Enhanced validation using security utilities
+    const titleValidation = validateTaskTitle(formData.title);
+    if (!titleValidation.isValid) {
+      toast.error(titleValidation.error || 'Task title is invalid');
       return;
     }
 
-    if (formData.external_link && !validateExternalLink(formData.external_link)) {
-      toast.error('Please enter a valid URL (starting with http:// or https://)');
+    const urlValidation = validateUrl(formData.external_link);
+    if (!urlValidation.isValid) {
+      toast.error(urlValidation.error || 'Invalid URL format');
       return;
     }
 
     const taskData = {
       title: formData.title.trim(),
-      description: formData.description.trim() || null,
+      description: sanitizeTaskDescription(formData.description),
       status: formData.status,
       priority: formData.priority,
       due_date: formData.due_date || null,

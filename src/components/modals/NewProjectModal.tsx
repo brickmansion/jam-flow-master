@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { validateProjectName, sanitizeHtml } from '@/utils/inputValidation';
 
 interface NewProjectModalProps {
   open: boolean;
@@ -73,7 +74,29 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
       const bpm = parseInt(formData.bpm);
       const sampleRate = parseInt(formData.sample_rate);
 
-      // Validation
+      // Enhanced validation using security utilities
+      const titleValidation = validateProjectName(formData.title);
+      if (!titleValidation.isValid) {
+        toast({
+          title: "Invalid Project Title",
+          description: titleValidation.error,
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const artistValidation = validateProjectName(formData.artist);
+      if (!artistValidation.isValid) {
+        toast({
+          title: "Invalid Artist Name",
+          description: "Artist name " + artistValidation.error?.toLowerCase(),
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
       if (!formData.bpm || isNaN(bpm) || bpm < 40 || bpm > 300) {
         toast({
           title: "Invalid BPM",
@@ -94,21 +117,10 @@ export function NewProjectModal({ open, onOpenChange, onProjectCreated }: NewPro
         return;
       }
 
-      // Check required fields
-      if (!formData.title.trim() || !formData.artist.trim()) {
-        toast({
-          title: "Missing required fields",
-          description: "Please fill in all required fields",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Create the project
+      // Create the project with sanitized inputs
       const projectData = {
-        title: formData.title,
-        artist: formData.artist,
+        title: sanitizeHtml(formData.title.trim()),
+        artist: sanitizeHtml(formData.artist.trim()),
         due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
         bpm,
         sample_rate: sampleRate,

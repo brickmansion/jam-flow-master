@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { Database } from '@/integrations/supabase/types';
+import { validateFileDescription } from '@/utils/inputValidation';
 
 type FileUpload = Database['public']['Tables']['file_uploads']['Row'];
 
@@ -159,12 +160,39 @@ export function FileUploadZone({
         console.log('Processing file:', file.name);
         setCurrentUploadFile(file.name);
         
-        // Basic client-side validation
+        // Enhanced client-side validation
         if (file.size > maxSize * 1024 * 1024) {
           console.log('File too large:', file.name, file.size);
           toast({
             title: "File too large",
             description: `${file.name} exceeds ${maxSize}MB limit`,
+            variant: "destructive"
+          });
+          continue;
+        }
+
+        // Validate file description
+        const descriptionValidation = validateFileDescription(description);
+        if (!descriptionValidation.isValid) {
+          toast({
+            title: "Invalid Description",
+            description: descriptionValidation.error,
+            variant: "destructive"
+          });
+          continue;
+        }
+
+        // Basic MIME type validation
+        const allowedMimeTypes = [
+          'audio/', 'video/', 'image/', 'application/pdf', 
+          'text/', 'application/zip', 'application/x-zip-compressed'
+        ];
+        
+        const isAllowedType = allowedMimeTypes.some(type => file.type.startsWith(type));
+        if (!isAllowedType && file.type !== '') { // Allow empty type for some valid files
+          toast({
+            title: "File type not allowed",
+            description: `${file.name} - Only audio, video, image, PDF, text, and ZIP files are allowed`,
             variant: "destructive"
           });
           continue;
@@ -201,7 +229,7 @@ export function FileUploadZone({
             mime_type: file.type,
             category,
             version: nextVersion,
-            description: description || null
+            description: description?.trim() || null
           });
 
         if (dbError) {

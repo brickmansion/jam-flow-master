@@ -142,6 +142,63 @@ export type Database = {
         }
         Relationships: []
       }
+      invitation_rate_limit: {
+        Row: {
+          created_at: string
+          id: string
+          invited_email: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_email: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_email?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invitation_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          project_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email: string
+          expires_at?: string
+          id?: string
+          project_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          project_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       project_members: {
         Row: {
           accepted_at: string | null
@@ -249,6 +306,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_change_audit: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          id: string
+          member_id: string
+          new_role: string
+          old_role: string | null
+          project_id: string
+          reason: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          id?: string
+          member_id: string
+          new_role: string
+          old_role?: string | null
+          project_id: string
+          reason?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          member_id?: string
+          new_role?: string
+          old_role?: string | null
+          project_id?: string
+          reason?: string | null
+        }
+        Relationships: []
       }
       tasks: {
         Row: {
@@ -375,6 +465,10 @@ export type Database = {
     Functions: {
       can_view_project: {
         Args: { project_uuid: string }
+        Returns: boolean
+      }
+      check_invitation_rate_limit: {
+        Args: { p_user_id: string; p_project_id: string; p_email: string }
         Returns: boolean
       }
       get_next_file_version: {
