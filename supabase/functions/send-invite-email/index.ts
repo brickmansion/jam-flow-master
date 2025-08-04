@@ -116,7 +116,7 @@ serve(async (req: Request): Promise<Response> => {
     console.log('Sending invitation email to:', sanitizedEmail, 'for project:', sanitizedProjectTitle);
 
     const emailResponse = await resend.emails.send({
-      from: "adam@sadbands.com", // Use your verified email for testing
+      from: Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@sadbands.com',
       to: [sanitizedEmail],
       subject: `You've been invited to collaborate on "${sanitizedProjectTitle}"`,
       html: `
