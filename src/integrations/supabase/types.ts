@@ -62,6 +62,7 @@ export type Database = {
           updated_at: string
           uploaded_by: string
           version: number
+          workspace_id: string | null
         }
         Insert: {
           category: Database["public"]["Enums"]["file_category"]
@@ -77,6 +78,7 @@ export type Database = {
           updated_at?: string
           uploaded_by: string
           version?: number
+          workspace_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["file_category"]
@@ -92,6 +94,7 @@ export type Database = {
           updated_at?: string
           uploaded_by?: string
           version?: number
+          workspace_id?: string | null
         }
         Relationships: []
       }

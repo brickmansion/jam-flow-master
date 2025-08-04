@@ -12,6 +12,7 @@ import { AudioPlayer } from './AudioPlayer';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { Database } from '@/integrations/supabase/types';
 
 type FileUpload = Database['public']['Tables']['file_uploads']['Row'];
@@ -40,6 +41,7 @@ export function FileUploadZone({
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useUserProfile();
+  const { workspace } = useWorkspace();
 
   // Allow all users to upload for now
   const canUpload = true;
@@ -180,6 +182,7 @@ export function FileUploadZone({
           .from('file_uploads')
           .insert({
             project_id: projectId,
+            workspace_id: workspace?.id, // Add workspace_id for RLS
             uploaded_by: user.id,
             filename: fileName,
             original_filename: file.name,
