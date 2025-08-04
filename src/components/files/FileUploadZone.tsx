@@ -180,70 +180,23 @@ export function FileUploadZone({
           contentType: file.type
         });
         
-        // Use multipart upload for files larger than 50MB
-        if (file.size > 50 * 1024 * 1024) {
-          console.log('Large file detected, using multipart upload');
-          
-          // Create a signed upload URL
-          const { data: signedUrlData, error: createError } = await supabase.storage
-            .from(bucketName)
-            .createSignedUploadUrl(fileName);
-            
-          if (createError || !signedUrlData) {
-            console.error('Failed to create signed upload URL:', createError);
-            throw createError;
-          }
-          
-          console.log('Created signed upload URL:', signedUrlData.signedUrl);
-          
-          // Upload the file directly using the signed URL with XMLHttpRequest for progress
-          await new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            
-            xhr.upload.addEventListener('progress', (event) => {
-              if (event.lengthComputable) {
-                const fileProgress = (event.loaded / event.total) * 80;
-                setUploadProgress(baseProgress + fileProgress);
-              }
-            });
-            
-            xhr.addEventListener('load', () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                console.log('Large file upload successful');
-                resolve();
-              } else {
-                reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
-              }
-            });
-            
-            xhr.addEventListener('error', () => {
-              reject(new Error('Upload failed'));
-            });
-            
-            xhr.open('PUT', signedUrlData.signedUrl);
-            xhr.setRequestHeader('Content-Type', file.type);
-            xhr.send(file);
+        // Use standard upload for all files to avoid signed URL issues
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type
           });
-          
-        } else {
-          // Use regular upload for smaller files
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from(bucketName)
-            .upload(fileName, file, {
-              cacheControl: '3600',
-              upsert: false,
-              contentType: file.type
-            });
 
-          console.log('Storage upload result:', { data: uploadData, error: uploadError });
+        console.log('Storage upload result:', { data: uploadData, error: uploadError });
 
-          if (uploadError) {
-            console.error('Storage upload error details:', {
-              message: uploadError.message,
-              error: uploadError
-            });
-            throw uploadError;
-          }
+        if (uploadError) {
+          console.error('Storage upload error details:', {
+            message: uploadError.message,
+            error: uploadError
+          });
+          throw uploadError;
         }
 
         console.log('Storage upload successful, saving to database...');
