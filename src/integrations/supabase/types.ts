@@ -149,6 +149,7 @@ export type Database = {
           song_key: Database["public"]["Enums"]["song_key"]
           title: string
           updated_at: string
+          workspace_id: string | null
         }
         Insert: {
           artist: string
@@ -162,6 +163,7 @@ export type Database = {
           song_key?: Database["public"]["Enums"]["song_key"]
           title: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Update: {
           artist?: string
@@ -175,6 +177,7 @@ export type Database = {
           song_key?: Database["public"]["Enums"]["song_key"]
           title?: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -182,6 +185,20 @@ export type Database = {
             columns: ["collection_id"]
             isOneToOne: false
             referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_storage_usage_gb"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -264,9 +281,49 @@ export type Database = {
         }
         Relationships: []
       }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          plan: string | null
+          trial_expires_at: string | null
+          trial_start_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          plan?: string | null
+          trial_expires_at?: string | null
+          trial_start_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          plan?: string | null
+          trial_expires_at?: string | null
+          trial_start_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      workspace_storage_usage_gb: {
+        Row: {
+          storage_gb: number | null
+          workspace_id: string | null
+          workspace_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_view_project: {
@@ -286,6 +343,10 @@ export type Database = {
       }
       is_project_member: {
         Args: { project_uuid: string }
+        Returns: boolean
+      }
+      workspace_has_pro_access: {
+        Args: { workspace_uuid: string }
         Returns: boolean
       }
     }
