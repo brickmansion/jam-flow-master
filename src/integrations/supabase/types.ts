@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      collection_members: {
+        Row: {
+          accepted_at: string | null
+          collection_id: string
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+          role: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          collection_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+          role: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          collection_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+          role?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_members_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collections: {
         Row: {
           artist: string | null

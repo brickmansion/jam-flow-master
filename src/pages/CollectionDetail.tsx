@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Plus, Calendar, Folder } from 'lucide-react';
 import { AddProjectModal } from '@/components/collections/AddProjectModal';
+import { CollectionCollaboratorsSection } from '@/components/collections/CollectionCollaboratorsSection';
 
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -286,8 +287,12 @@ export const CollectionDetail = () => {
           )}
         </div>
 
-        {/* Collection Collaborators will be available after migration completes */}
-        {/* Waiting for Supabase types to update with collection_members table */}
+        {/* Collection Collaborators Section */}
+        <CollectionCollaboratorsSection 
+          collectionId={id!}
+          producerId={collection.producer_id}
+          producerEmail={user?.email}
+        />
 
         <AddProjectModal
           open={showAddProjectModal}
