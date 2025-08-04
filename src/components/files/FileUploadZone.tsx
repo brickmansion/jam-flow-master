@@ -158,7 +158,11 @@ export function FileUploadZone({
         // PHASE 3: Enhanced file validation using edge function
         try {
           console.log('Validating file with edge function...');
-          const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+          const validationTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Validation timeout')), 10000)
+          );
+          
+          const validationPromise = supabase.functions.invoke(
             'validate-file-upload',
             {
               body: {
@@ -169,6 +173,11 @@ export function FileUploadZone({
               }
             }
           );
+
+          const { data: validationResult, error: validationError } = await Promise.race([
+            validationPromise,
+            validationTimeout
+          ]) as any;
 
           console.log('Validation result:', validationResult, 'Error:', validationError);
 
@@ -182,13 +191,9 @@ export function FileUploadZone({
             continue;
           }
         } catch (validationErr) {
-          console.error('Validation error:', validationErr);
-          toast({
-            title: "Validation error",
-            description: "Could not validate file. Please try again.",
-            variant: "destructive"
-          });
-          continue;
+          console.error('Validation error (skipping validation):', validationErr);
+          // Skip validation and continue with upload if validation fails
+          console.log('Continuing without edge function validation');
         }
 
         // Legacy client-side validation as fallback
