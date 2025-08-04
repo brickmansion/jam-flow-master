@@ -340,6 +340,45 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          resource_id: string | null
+          resource_type: string | null
+          severity: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -485,6 +524,17 @@ export type Database = {
       is_project_member: {
         Args: { project_uuid: string }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          p_event_type: string
+          p_user_id?: string
+          p_resource_type?: string
+          p_resource_id?: string
+          p_details?: Json
+          p_severity?: string
+        }
+        Returns: string
       }
       workspace_has_pro_access: {
         Args: { workspace_uuid: string }
