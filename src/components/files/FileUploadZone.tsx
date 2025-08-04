@@ -132,7 +132,39 @@ export function FileUploadZone({
       const nextVersion = versionData || 1;
 
       for (const file of filesToUpload) {
-        // Validate file size
+        // PHASE 3: Enhanced file validation using edge function
+        try {
+          const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+            'validate-file-upload',
+            {
+              body: {
+                fileName: file.name,
+                fileSize: file.size,
+                mimeType: file.type,
+                category: category
+              }
+            }
+          );
+
+          if (validationError || !validationResult?.valid) {
+            toast({
+              title: "File validation failed",
+              description: validationResult?.error || validationError?.message || "File validation failed",
+              variant: "destructive"
+            });
+            continue;
+          }
+        } catch (validationErr) {
+          console.error('Validation error:', validationErr);
+          toast({
+            title: "Validation error",
+            description: "Could not validate file. Please try again.",
+            variant: "destructive"
+          });
+          continue;
+        }
+
+        // Legacy client-side validation as fallback
         if (file.size > maxSize * 1024 * 1024) {
           toast({
             title: "File too large",
@@ -142,21 +174,9 @@ export function FileUploadZone({
           continue;
         }
 
-        // Validate file type
-        if (allowedTypes.length > 0 && !allowedTypes.includes('*')) {
-          const fileExtension = `.${file.name.split('.').pop()?.toLowerCase()}`;
-          if (!allowedTypes.includes(fileExtension)) {
-            toast({
-              title: "Invalid file type",
-              description: `${file.name} is not a supported file type. Allowed: ${allowedTypes.join(', ')}`,
-              variant: "destructive"
-            });
-            continue;
-          }
-        }
-
-        // Upload to storage
-        const fileName = `${projectId}/${category}/${nextVersion}-${file.name}`;
+        // Generate secure file path with UUID prefix (PHASE 5: File-path sanitization)
+        const secureFileName = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const fileName = `${projectId}/${category}/${nextVersion}-${secureFileName}`;
         const bucketName = category === 'sessions' ? 'sessions' : 'project-files';
         
         const { error: uploadError } = await supabase.storage

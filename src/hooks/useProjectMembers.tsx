@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import { filterMemberEmailForPrivacy, getCurrentUserRoleInProject, type ProjectMemberWithRole } from '@/utils/privacyUtils';
+import { useAuth } from './useAuth';
 
 export interface ProjectMember {
   id: string;
@@ -16,7 +18,9 @@ export interface ProjectMember {
 export function useProjectMembers(projectId: string) {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchMembers = async () => {
     if (!projectId) return;
@@ -51,14 +55,36 @@ export function useProjectMembers(projectId: string) {
         return;
       }
 
+      // PHASE 5: Hide member emails - only show emails to producers/managers or own email
       const { data, error } = await supabase
         .from('project_members')
-        .select('*')
+        .select(`
+          *,
+          projects!inner (producer_id)
+        `)
         .eq('project_id', projectId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMembers((data || []) as ProjectMember[]);
+
+      // Get current user's role for privacy filtering
+      if (user) {
+        const userRole = await getCurrentUserRoleInProject(projectId, user.id);
+        setCurrentUserRole(userRole);
+
+        // Apply privacy filtering to member emails
+        const filteredMembers = (data || []).map((member: ProjectMemberWithRole) => 
+          filterMemberEmailForPrivacy(member, user.id, userRole)
+        );
+        
+        setMembers(filteredMembers as ProjectMember[]);
+      } else {
+        // Hide all emails for unauthenticated users
+        const anonymizedMembers = (data || []).map((member: ProjectMemberWithRole) => 
+          filterMemberEmailForPrivacy(member, null)
+        );
+        setMembers(anonymizedMembers as ProjectMember[]);
+      }
     } catch (error: any) {
       console.error('Error fetching project members:', error);
       toast({
