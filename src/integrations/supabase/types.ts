@@ -249,6 +249,7 @@ export type Database = {
           due_date: string | null
           id: string
           producer_id: string
+          progress: Json | null
           sample_rate: number
           song_key: Database["public"]["Enums"]["song_key"]
           title: string
@@ -263,6 +264,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           producer_id: string
+          progress?: Json | null
           sample_rate: number
           song_key?: Database["public"]["Enums"]["song_key"]
           title: string
@@ -277,6 +279,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           producer_id?: string
+          progress?: Json | null
           sample_rate?: number
           song_key?: Database["public"]["Enums"]["song_key"]
           title?: string

@@ -139,8 +139,28 @@ export default function ProjectDetail() {
           navigate('/dashboard');
         } else {
           setProject(data);
-          // Set random progress for real projects until task system is integrated
-          setProgress(Math.floor(Math.random() * 100));
+          
+          // Load progress from database if available
+          if (data.progress && typeof data.progress === 'object') {
+            const dbProgress = data.progress as Record<string, any>;
+            const mappedPhaseStatus = {
+              'pre-production': dbProgress.preProduction || 'not-started',
+              'recording': dbProgress.recording || 'not-started', 
+              'editing': dbProgress.editing || 'not-started',
+              'mixing': dbProgress.mixing || 'not-started',
+              'mastering': dbProgress.mastering || 'not-started'
+            };
+            setPhaseStatus(mappedPhaseStatus);
+            
+            // Calculate overall progress from phase statuses
+            const totalPhases = Object.keys(mappedPhaseStatus).length;
+            const completedPhases = Object.values(mappedPhaseStatus).filter(s => s === 'complete').length;
+            const calculatedProgress = Math.round((completedPhases / totalPhases) * 100);
+            setProgress(calculatedProgress);
+          } else {
+            // Set random progress for projects without progress data
+            setProgress(Math.floor(Math.random() * 100));
+          }
         }
       }
     } catch (error) {
@@ -242,19 +262,50 @@ export default function ProjectDetail() {
     setPhaseProgress(newPhaseProgress);
   };
 
-  const handlePhaseStatusChange = (phase: string, status: string) => {
-    setPhaseStatus(prev => ({ ...prev, [phase]: status }));
+  const handlePhaseStatusChange = async (phase: string, status: string) => {
+    const updatedPhaseStatus = { ...phaseStatus, [phase]: status };
+    setPhaseStatus(updatedPhaseStatus);
     
     // Save to localStorage for demo mode
     if (user?.id === 'demo-user-id' && id) {
       const storageKey = `project-${id}-phase-status`;
-      const updatedStatus = { ...phaseStatus, [phase]: status };
-      localStorage.setItem(storageKey, JSON.stringify(updatedStatus));
+      localStorage.setItem(storageKey, JSON.stringify(updatedPhaseStatus));
+    } else if (project && user) {
+      // Save to database for real users
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .update({ 
+            progress: {
+              preProduction: updatedPhaseStatus['pre-production'] || 'not-started',
+              recording: updatedPhaseStatus['recording'] || 'not-started',
+              editing: updatedPhaseStatus['editing'] || 'not-started',
+              mixing: updatedPhaseStatus['mixing'] || 'not-started',
+              mastering: updatedPhaseStatus['mastering'] || 'not-started'
+            }
+          })
+          .eq('id', project.id);
+
+        if (error) {
+          console.error('Error updating project progress:', error);
+          toast({
+            title: "Error updating progress",
+            description: "Could not save progress. Please try again.",
+            variant: "destructive"
+          });
+          // Revert the state change
+          setPhaseStatus(phaseStatus);
+          return;
+        }
+      } catch (error) {
+        console.error('Error updating project progress:', error);
+        setPhaseStatus(phaseStatus);
+      }
     }
     
     // Calculate overall progress based on completed phases
-    const totalPhases = Object.keys(phaseStatus).length;
-    const completedPhases = Object.values({ ...phaseStatus, [phase]: status }).filter(s => s === 'complete').length;
+    const totalPhases = Object.keys(updatedPhaseStatus).length;
+    const completedPhases = Object.values(updatedPhaseStatus).filter(s => s === 'complete').length;
     const newProgress = Math.round((completedPhases / totalPhases) * 100);
     setProgress(newProgress);
   };
