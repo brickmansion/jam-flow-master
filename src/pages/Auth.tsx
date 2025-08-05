@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Music } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { supabase } from '@/integrations/supabase/client';
+
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -154,7 +154,11 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Music className="h-12 w-12 text-primary" />
+            <img 
+              src="/lovable-uploads/209ea4f7-3ff8-40e5-96f1-092fc9783269.png" 
+              alt="SeshPrep logo" 
+              className="h-12 w-auto"
+            />
           </div>
           <CardTitle className="text-2xl">Welcome to SeshPrep</CardTitle>
           <CardDescription>
