@@ -25,8 +25,15 @@ export default function ResetPassword() {
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
     const type = searchParams.get('type');
+    const allParams = Object.fromEntries(searchParams.entries());
     
-    console.log('ResetPassword DEBUG: URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+    console.log('ResetPassword DEBUG: Full URL:', window.location.href);
+    console.log('ResetPassword DEBUG: All URL params:', allParams);
+    console.log('ResetPassword DEBUG: Specific params:', { 
+      accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : null, 
+      refreshToken: refreshToken ? `${refreshToken.substring(0, 20)}...` : null, 
+      type 
+    });
     
     if (!accessToken || type !== 'recovery') {
       console.log('ResetPassword DEBUG: Missing required params');
