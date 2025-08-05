@@ -87,7 +87,7 @@ export default function ResetPassword() {
         description: "Your password has been successfully updated. Please sign in with your new password."
       });
 
-      navigate('/auth');
+      navigate('/login?reset=success');
     } catch (err: any) {
       setError(err.message || 'Failed to update password');
       toast({
@@ -100,16 +100,9 @@ export default function ResetPassword() {
     }
   };
 
+  // Show nothing until token validation resolves
   if (isValidToken === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return null;
   }
 
   if (isValidToken === false) {
@@ -144,7 +137,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-sm mx-auto mt-24">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Music className="h-12 w-12 text-primary" />
@@ -166,10 +159,10 @@ export default function ResetPassword() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
               <p className="text-xs text-muted-foreground">
-                Must be at least 6 characters with uppercase, lowercase, and number
+                Must be at least 8 characters with uppercase, lowercase, and number
               </p>
             </div>
             
@@ -182,7 +175,7 @@ export default function ResetPassword() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 

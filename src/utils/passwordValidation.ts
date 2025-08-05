@@ -6,8 +6,8 @@ export interface PasswordValidationResult {
 export function validatePassword(password: string): PasswordValidationResult {
   const errors: string[] = [];
   
-  if (password.length < 6) {
-    errors.push('Password must be at least 6 characters');
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters');
   }
   
   if (!/(?=.*[a-z])/.test(password)) {
