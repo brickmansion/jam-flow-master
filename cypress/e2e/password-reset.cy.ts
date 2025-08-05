@@ -1,4 +1,10 @@
 describe('Password Reset Flow', () => {
+  beforeEach(() => {
+    // Stub environment variable for consistent testing
+    cy.window().then((win) => {
+      win.process = { env: { NEXT_PUBLIC_APP_URL: 'http://localhost:3000' } };
+    });
+  });
   const testEmail = 'test@example.com';
   const newPassword = 'NewPassword123!';
 

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { APP_URL } from '@/lib/env';
 
 interface ForgotPasswordModalProps {
   open: boolean;
@@ -26,8 +27,7 @@ export function ForgotPasswordModal({ open, onOpenChange }: ForgotPasswordModalP
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-        captchaToken: undefined
+        redirectTo: `${APP_URL}/reset-password`,
       });
 
       if (error) {

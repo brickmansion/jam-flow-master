@@ -64,6 +64,17 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/6c1fe617-e800-45c7-84f0-6ca73e3e21c2) and click on Share -> Publish.
 
+## Environment Variables
+
+This project requires environment variables to be configured for different environments:
+
+**NEXT_PUBLIC_APP_URL**: Must match the Site URL configured in Supabase Authentication → URL Configuration for each environment:
+- Development: `http://localhost:3000` (set in `.env.local`)
+- Preview: `https://6c1fe617-e800-45c7-84f0-6ca73e3e21c2.lovableproject.com` (set in Lovable deployment settings)
+- Production: `https://seshprep.com` (set in Lovable deployment settings)
+
+This ensures password reset links work correctly across all environments.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
