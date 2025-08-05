@@ -33,18 +33,15 @@ export default function ResetPassword() {
   // Validate token on mount
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    const type = searchParams.get('type');
     
-    if (!accessToken || !refreshToken) {
+    if (!accessToken || type !== 'recovery') {
       setIsValidToken(false);
       return;
     }
 
-    // Set the session with the tokens from the URL
-    supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken
-    }).then(({ error }) => {
+    // Exchange the code for session using the new flow
+    supabase.auth.exchangeCodeForSession(accessToken).then(({ error }) => {
       setIsValidToken(!error);
       if (error) {
         setError('Invalid or expired reset link');
@@ -152,7 +149,7 @@ export default function ResetPassword() {
           <div className="flex justify-center mb-4">
             <Music className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Set New Password</CardTitle>
+          <CardTitle className="text-2xl">Reset your password</CardTitle>
           <CardDescription>
             Choose a strong password for your SeshPrep account
           </CardDescription>
