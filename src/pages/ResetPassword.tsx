@@ -40,13 +40,13 @@ export default function ResetPassword() {
       return;
     }
 
-    // Verify the recovery token
-    supabase.auth.verifyOtp({
-      token_hash: accessToken,
-      type: 'recovery'
-    }).then(({ error }) => {
+    // Exchange the code for session using the new flow
+    console.log('Exchanging token:', accessToken);
+    supabase.auth.exchangeCodeForSession(accessToken).then(({ error }) => {
+      console.log('Exchange result:', { error });
       setIsValidToken(!error);
       if (error) {
+        console.error('Token exchange error:', error);
         setError('Invalid or expired reset link');
       }
     });
