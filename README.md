@@ -68,7 +68,7 @@ Simply open [Lovable](https://lovable.dev/projects/6c1fe617-e800-45c7-84f0-6ca73
 
 This project requires environment variables to be configured for different environments:
 
-**NEXT_PUBLIC_APP_URL**: Must match the Site URL configured in Supabase Authentication → URL Configuration for each environment:
+**VITE_APP_URL**: Must match the Site URL configured in Supabase Authentication → URL Configuration for each environment:
 - Development: `http://localhost:3000` (set in `.env.local`)
 - Preview: `https://6c1fe617-e800-45c7-84f0-6ca73e3e21c2.lovableproject.com` (set in Lovable deployment settings)
 - Production: `https://seshprep.com` (set in Lovable deployment settings)
