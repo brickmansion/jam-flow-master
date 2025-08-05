@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,21 +11,70 @@ import { Music } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [invitationToken, setInvitationToken] = useState<string | null>(null);
+  const [invitationEmail, setInvitationEmail] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     role: 'producer' as 'producer' | 'assistant'
   });
+
+  // Check for invitation token on mount
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      validateInvitationToken(token);
+    }
+  }, [searchParams]);
+
+  const validateInvitationToken = async (token: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('invitation_tokens')
+        .select('email, expires_at, used_at, project_id')
+        .eq('token', token)
+        .single();
+
+      if (error || !data) {
+        setError('Invalid invitation link');
+        return;
+      }
+
+      if (data.used_at) {
+        setError('This invitation has already been used');
+        return;
+      }
+
+      if (new Date(data.expires_at) < new Date()) {
+        setError('This invitation has expired');
+        return;
+      }
+
+      setInvitationToken(token);
+      setInvitationEmail(data.email);
+      setFormData(prev => ({ ...prev, email: data.email }));
+      
+      toast({
+        title: "Invitation found",
+        description: `You've been invited to join a project. Please complete your signup.`,
+      });
+    } catch (err) {
+      console.error('Error validating invitation token:', err);
+      setError('Failed to validate invitation');
+    }
+  };
 
   // Redirect if already logged in (except during password recovery)
   const isRecovery = location.pathname === '/reset-password' && location.search.includes('type=recovery');
@@ -70,10 +119,31 @@ export default function Auth() {
         variant: "destructive"
       });
     } else {
-      toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account."
-      });
+      // If this was from an invitation, mark the token as used
+      if (invitationToken) {
+        try {
+          await supabase
+            .from('invitation_tokens')
+            .update({ used_at: new Date().toISOString() })
+            .eq('token', invitationToken);
+          
+          toast({
+            title: "Account created!",
+            description: "Welcome to the team! Please check your email to verify your account."
+          });
+        } catch (tokenError) {
+          console.error('Error updating invitation token:', tokenError);
+          toast({
+            title: "Account created!",
+            description: "Please check your email to verify your account."
+          });
+        }
+      } else {
+        toast({
+          title: "Account created!",
+          description: "Please check your email to verify your account."
+        });
+      }
     }
     
     setIsLoading(false);
@@ -150,6 +220,7 @@ export default function Auth() {
                     placeholder="producer@studio.com"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    disabled={!!invitationEmail}
                     required
                   />
                 </div>
