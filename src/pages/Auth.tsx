@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   
@@ -26,8 +27,9 @@ export default function Auth() {
     role: 'producer' as 'producer' | 'assistant'
   });
 
-  // Redirect if already logged in
-  if (user) {
+  // Redirect if already logged in (except during password recovery)
+  const isRecovery = location.pathname === '/reset-password' && location.search.includes('type=recovery');
+  if (user && !isRecovery) {
     navigate('/dashboard');
     return null;
   }
