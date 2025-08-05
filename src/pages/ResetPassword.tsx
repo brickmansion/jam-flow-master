@@ -26,7 +26,14 @@ export default function ResetPassword() {
   // Redirect authenticated users to dashboard (except during password recovery)
   useEffect(() => {
     const type = searchParams.get('type');
-    if (user && type !== 'recovery') {
+    const accessToken = searchParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token');
+    
+    console.log('ResetPassword: All URL params', Object.fromEntries(searchParams.entries()));
+    console.log('ResetPassword: User exists?', !!user);
+    
+    if (user && type !== 'recovery' && !accessToken && !refreshToken) {
+      console.log('ResetPassword: Redirecting to dashboard');
       navigate('/dashboard');
     }
   }, [user, navigate, searchParams]);
