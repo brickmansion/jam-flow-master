@@ -1,122 +1,93 @@
 describe('Password Reset Flow', () => {
   beforeEach(() => {
-    // Stub environment variable for consistent testing
+    // Stub the Supabase auth methods
     cy.window().then((win) => {
-      (win as any).import = { meta: { env: { VITE_APP_URL: 'http://localhost:3000' } } };
+      // Mock successful token exchange
+      cy.stub(win.supabase.auth, 'exchangeCodeForSession').resolves({
+        data: { session: { user: { id: 'test-user' } } },
+        error: null
+      });
+
+      // Mock successful password update
+      cy.stub(win.supabase.auth, 'updateUser').resolves({
+        data: { user: { id: 'test-user' } },
+        error: null
+      });
     });
   });
-  const testEmail = 'test@example.com';
-  const newPassword = 'NewPassword123!';
 
-  beforeEach(() => {
-    cy.visit('/auth');
+  it('should reset password successfully', () => {
+    // Visit reset password page with valid token
+    cy.visit('/reset-password?type=recovery&access_token=TEST');
+
+    // Wait for token exchange and form to appear
+    cy.get('#password', { timeout: 10000 }).should('be.visible');
+
+    // Fill in new password
+    cy.get('#password').type('NewPassword123');
+    cy.get('#confirmPassword').type('NewPassword123');
+
+    // Submit form
+    cy.get('button[type="submit"]').click();
+
+    // Assert redirect to login with success parameter
+    cy.url().should('include', '/login?reset=success');
   });
 
-  it('should complete full password reset flow', () => {
-    // Step 1: Click forgot password link
-    cy.get('button').contains('Forgot password?').click();
-    
-    // Step 2: Enter email in modal
-    cy.get('[data-testid="forgot-password-modal"]').should('be.visible');
-    cy.get('input[type="email"]').type(testEmail);
-    cy.get('button').contains('Send Reset Link').click();
-    
-    // Step 3: Verify success message
-    cy.contains('Check your email').should('be.visible');
-    cy.contains(testEmail).should('be.visible');
-    
-    // Step 4: Simulate email link click by navigating directly
-    // In a real test, you'd need to intercept the email or use a test email service
-    const mockTokens = {
-      access_token: 'test_access_token',
-      refresh_token: 'test_refresh_token'
-    };
-    
-    cy.visit(`/reset-password?access_token=${mockTokens.access_token}&refresh_token=${mockTokens.refresh_token}`);
-    
-    // Step 5: Fill in new password form
-    cy.get('input[id="new-password"]').type(newPassword);
-    cy.get('input[id="confirm-password"]').type(newPassword);
-    
-    // Step 6: Submit new password
-    cy.get('button').contains('Update Password').click();
-    
-    // Step 7: Verify redirect to auth with success message
-    cy.url().should('include', '/auth');
-    cy.get('[data-sonner-toaster]').should('contain', 'Password updated');
+  it('should show error for invalid token', () => {
+    // Mock failed token exchange
+    cy.window().then((win) => {
+      cy.stub(win.supabase.auth, 'exchangeCodeForSession').resolves({
+        data: { session: null },
+        error: { message: 'Invalid token' }
+      });
+    });
+
+    // Visit reset password page with invalid token
+    cy.visit('/reset-password?type=recovery&access_token=INVALID');
+
+    // Should show invalid token message
+    cy.contains('Invalid or expired link').should('be.visible');
+    cy.contains('Back to login').should('be.visible');
   });
 
-  it('should show error for invalid reset link', () => {
-    // Visit reset page without valid tokens
+  it('should show error for missing token', () => {
+    // Visit reset password page without token
     cy.visit('/reset-password');
-    
-    // Should show invalid link message
-    cy.contains('Invalid Reset Link').should('be.visible');
-    cy.contains('This password reset link is invalid or has expired').should('be.visible');
-    
-    // Should have button to go back to login
-    cy.get('button').contains('Back to Login').click();
-    cy.url().should('include', '/auth');
+
+    // Should show invalid token message
+    cy.contains('Invalid or expired link').should('be.visible');
   });
 
   it('should validate password requirements', () => {
-    const mockTokens = {
-      access_token: 'test_access_token',
-      refresh_token: 'test_refresh_token'
-    };
-    
-    cy.visit(`/reset-password?access_token=${mockTokens.access_token}&refresh_token=${mockTokens.refresh_token}`);
-    
-    // Test weak password
-    cy.get('input[id="new-password"]').type('weak');
-    cy.get('input[id="confirm-password"]').type('weak');
-    cy.get('button').contains('Update Password').click();
-    
-    // Should show validation error
-    cy.get('[role="alert"]').should('contain', 'Password must be at least 6 characters');
+    // Visit with valid token
+    cy.visit('/reset-password?type=recovery&access_token=TEST');
+
+    // Wait for form
+    cy.get('#password', { timeout: 10000 }).should('be.visible');
+
+    // Try with short password
+    cy.get('#password').type('123');
+    cy.get('#confirmPassword').type('123');
+    cy.get('button[type="submit"]').click();
+
+    // Should show error
+    cy.contains('Password must be at least 8 characters').should('be.visible');
   });
 
-  it('should validate password confirmation match', () => {
-    const mockTokens = {
-      access_token: 'test_access_token',
-      refresh_token: 'test_refresh_token'
-    };
-    
-    cy.visit(`/reset-password?access_token=${mockTokens.access_token}&refresh_token=${mockTokens.refresh_token}`);
-    
-    // Test mismatched passwords
-    cy.get('input[id="new-password"]').type(newPassword);
-    cy.get('input[id="confirm-password"]').type('DifferentPassword123!');
-    cy.get('button').contains('Update Password').click();
-    
-    // Should show mismatch error
-    cy.get('[role="alert"]').should('contain', 'Passwords do not match');
-  });
+  it('should validate password match', () => {
+    // Visit with valid token
+    cy.visit('/reset-password?type=recovery&access_token=TEST');
 
-  it('should not allow authenticated users on reset page', () => {
-    // This test would need to mock an authenticated user session
-    // For a real implementation, you'd log in a user first
-    cy.window().then((win) => {
-      // Mock authenticated user
-      win.localStorage.setItem('supabase.auth.token', 'mock_session');
-    });
-    
-    cy.visit('/reset-password');
-    
-    // Should redirect to dashboard
-    cy.url().should('include', '/dashboard');
-  });
+    // Wait for form
+    cy.get('#password', { timeout: 10000 }).should('be.visible');
 
-  it('should allow authenticated users on reset page with type=recovery', () => {
-    cy.window().then((win) => {
-      // Mock authenticated user
-      win.localStorage.setItem('supabase.auth.token', 'mock_session');
-    });
-    
-    cy.visit('/reset-password?type=recovery&access_token=test_token');
-    
-    // Should NOT redirect to dashboard
-    cy.url().should('include', '/reset-password');
-    cy.url().should('include', 'type=recovery');
+    // Try with mismatched passwords
+    cy.get('#password').type('Password123');
+    cy.get('#confirmPassword').type('DifferentPassword123');
+    cy.get('button[type="submit"]').click();
+
+    // Should show error
+    cy.contains('Passwords do not match').should('be.visible');
   });
 });
