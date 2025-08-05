@@ -40,8 +40,11 @@ export default function ResetPassword() {
       return;
     }
 
-    // Exchange the code for session using the new flow
-    supabase.auth.exchangeCodeForSession(accessToken).then(({ error }) => {
+    // Verify the recovery token
+    supabase.auth.verifyOtp({
+      token_hash: accessToken,
+      type: 'recovery'
+    }).then(({ error }) => {
       setIsValidToken(!error);
       if (error) {
         setError('Invalid or expired reset link');
