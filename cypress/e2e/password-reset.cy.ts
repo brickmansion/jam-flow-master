@@ -106,4 +106,17 @@ describe('Password Reset Flow', () => {
     // Should redirect to dashboard
     cy.url().should('include', '/dashboard');
   });
+
+  it('should allow authenticated users on reset page with type=recovery', () => {
+    cy.window().then((win) => {
+      // Mock authenticated user
+      win.localStorage.setItem('supabase.auth.token', 'mock_session');
+    });
+    
+    cy.visit('/reset-password?type=recovery&access_token=test_token');
+    
+    // Should NOT redirect to dashboard
+    cy.url().should('include', '/reset-password');
+    cy.url().should('include', 'type=recovery');
+  });
 });

@@ -23,12 +23,13 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users to dashboard (except during password recovery)
   useEffect(() => {
-    if (user) {
+    const type = searchParams.get('type');
+    if (user && type !== 'recovery') {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, navigate, searchParams]);
 
   // Validate token on mount
   useEffect(() => {
