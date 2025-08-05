@@ -24,17 +24,29 @@ export default function ResetPassword() {
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
     const type = searchParams.get('type');
+    const allParams = Object.fromEntries(searchParams.entries());
+    
+    console.log('ResetPassword DEBUG: All URL params:', allParams);
+    console.log('ResetPassword DEBUG: Access token exists?', !!accessToken);
+    console.log('ResetPassword DEBUG: Type is recovery?', type === 'recovery');
+    console.log('ResetPassword DEBUG: Current URL:', window.location.href);
     
     if (!accessToken || type !== 'recovery') {
+      console.log('ResetPassword DEBUG: Invalid token or type, setting isValidToken to false');
       setIsValidToken(false);
       return;
     }
 
     // Exchange the code for session
+    console.log('ResetPassword DEBUG: Attempting token exchange...');
     supabase.auth.exchangeCodeForSession(accessToken).then(({ error }) => {
+      console.log('ResetPassword DEBUG: Token exchange result:', { error });
       setIsValidToken(!error);
       if (error) {
+        console.error('ResetPassword DEBUG: Token exchange error:', error);
         setError('Invalid or expired reset link');
+      } else {
+        console.log('ResetPassword DEBUG: Token exchange successful!');
       }
     });
   }, [searchParams]);
