@@ -23,30 +23,30 @@ export default function ResetPassword() {
   // Validate token on mount
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token');
     const type = searchParams.get('type');
-    const allParams = Object.fromEntries(searchParams.entries());
     
-    console.log('ResetPassword DEBUG: All URL params:', allParams);
-    console.log('ResetPassword DEBUG: Access token exists?', !!accessToken);
-    console.log('ResetPassword DEBUG: Type is recovery?', type === 'recovery');
-    console.log('ResetPassword DEBUG: Current URL:', window.location.href);
+    console.log('ResetPassword DEBUG: URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
     
     if (!accessToken || type !== 'recovery') {
-      console.log('ResetPassword DEBUG: Invalid token or type, setting isValidToken to false');
+      console.log('ResetPassword DEBUG: Missing required params');
       setIsValidToken(false);
       return;
     }
 
-    // Exchange the code for session
-    console.log('ResetPassword DEBUG: Attempting token exchange...');
-    supabase.auth.exchangeCodeForSession(accessToken).then(({ error }) => {
-      console.log('ResetPassword DEBUG: Token exchange result:', { error });
+    // Set session for password reset
+    console.log('ResetPassword DEBUG: Setting session...');
+    supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken || ''
+    }).then(({ error }) => {
+      console.log('ResetPassword DEBUG: Session result:', { error });
       setIsValidToken(!error);
       if (error) {
-        console.error('ResetPassword DEBUG: Token exchange error:', error);
+        console.error('ResetPassword DEBUG: Session error:', error);
         setError('Invalid or expired reset link');
       } else {
-        console.log('ResetPassword DEBUG: Token exchange successful!');
+        console.log('ResetPassword DEBUG: Session established successfully!');
       }
     });
   }, [searchParams]);
