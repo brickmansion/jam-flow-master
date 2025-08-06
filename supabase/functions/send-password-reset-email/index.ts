@@ -30,26 +30,38 @@ Deno.serve(async (req) => {
     const headers = Object.fromEntries(req.headers)
     const wh = new Webhook(hookSecret)
     
-    const {
-      user,
-      email_data: { token_hash, redirect_to, email_action_type },
-    } = wh.verify(payload, headers) as {
-      user: {
-        email: string
-      }
-      email_data: {
-        token_hash: string
-        redirect_to: string
-        email_action_type: string
-        site_url: string
-      }
+    // Verify webhook and extract data
+    let user, email_data;
+    try {
+      const webhookData = wh.verify(payload, headers) as {
+        user: {
+          email: string
+        }
+        email_data: {
+          token_hash: string
+          redirect_to: string
+          email_action_type: string
+          site_url: string
+        }
+      };
+      user = webhookData.user;
+      email_data = webhookData.email_data;
+    } catch (verifyError) {
+      console.error('Webhook verification failed:', verifyError);
+      return new Response(JSON.stringify({ error: 'Webhook verification failed' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
     }
+
+    const { token_hash, redirect_to, email_action_type } = email_data;
 
     // Only handle password recovery emails
     if (email_action_type !== 'recovery') {
-      return new Response('Not a password recovery email', { 
+      console.log(`Ignoring email type: ${email_action_type}`);
+      return new Response(JSON.stringify({ message: `Email type ${email_action_type} not handled by this function` }), { 
         status: 200,
-        headers: corsHeaders
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       })
     }
 
