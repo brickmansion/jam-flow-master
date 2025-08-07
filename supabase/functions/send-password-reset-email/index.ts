@@ -1,8 +1,6 @@
-import React from 'npm:react@18.3.1'
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 import { Resend } from 'npm:resend@4.0.0'
-import { renderAsync } from 'npm:@react-email/components@0.0.22'
-import { PasswordResetEmail } from './_templates/password-reset.tsx'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string
@@ -12,7 +10,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -96,11 +94,27 @@ Deno.serve(async (req) => {
     console.log('Sending password reset email to:', user.email)
     console.log('Reset URL:', reset_url)
 
-    const html = await renderAsync(
-      React.createElement(PasswordResetEmail, {
-        reset_url,
-      })
-    )
+    // Simple HTML email instead of React Email for now
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Reset Your Password</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #333;">Reset Your Password</h1>
+          <p>You recently requested to reset your password for your SeshPrep account. Click the button below to reset it.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${reset_url}" style="background-color: #007cba; color: white; padding: 14px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+          </div>
+          <p>Or copy and paste this URL into your browser:</p>
+          <p style="background-color: #f4f4f4; padding: 10px; border-radius: 5px; word-break: break-all;">${reset_url}</p>
+          <p style="color: #999; font-size: 14px;">If you didn't request this password reset, you can safely ignore this email. This link will expire in 24 hours.</p>
+          <p>Best regards,<br/>The SeshPrep Team</p>
+        </body>
+      </html>
+    `
 
     const { error } = await resend.emails.send({
       from: 'SeshPrep <noreply@seshprep.com>',
