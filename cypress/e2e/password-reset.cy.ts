@@ -31,7 +31,7 @@ describe('Password Reset Flow', () => {
     cy.get('button[type="submit"]').click();
 
     // Assert redirect to login with success parameter
-    cy.url().should('include', '/login?reset=success');
+    cy.url().should('include', '/auth?reset=success');
   });
 
   it('should show error for invalid token', () => {

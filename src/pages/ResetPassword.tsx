@@ -72,7 +72,7 @@ export default function ResetPassword() {
         description: "Please log in with your new password"
       });
 
-      navigate('/login?reset=success');
+      navigate('/auth?reset=success');
     } catch (err: any) {
       setError(err.message || 'Failed to update password');
     } finally {
