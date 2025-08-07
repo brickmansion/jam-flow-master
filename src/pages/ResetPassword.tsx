@@ -50,9 +50,17 @@ export default function ResetPassword() {
         }
       }
 
-      // 2) Legacy flow: access_token and refresh_token present in hash
+      // 2) Fallback: some older/custom emails pass token_hash as access_token only
       const access_token = hashParams.get('access_token');
       const refresh_token = hashParams.get('refresh_token');
+      if (access_token && !refresh_token && !code) {
+        console.log('ResetPassword DEBUG: Detected token_hash without refresh token, redirecting to Supabase verify');
+        const redirectTo = `${window.location.origin}/reset-password`;
+        window.location.replace(`https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token_hash=${access_token}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`);
+        return; // Stop here; page will reload after verification
+      }
+
+      // 3) Legacy flow: access_token and refresh_token present in hash
       if (access_token && refresh_token) {
         console.log('ResetPassword DEBUG: Found tokens in hash, setting session');
         try {
