@@ -97,7 +97,43 @@ export default function ResetPassword() {
     }
 
     try {
+      // Ensure we have an auth session before updating the password
+      const ensureSession = async () => {
+        const url = new URL(window.location.href);
+        const hash = url.hash.substring(1);
+        const hashParams = new URLSearchParams(hash);
+        const code = url.searchParams.get('code');
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) return true;
+
+        try {
+          if (code) {
+            console.log('ResetPassword DEBUG: Re-exchanging code for session before update');
+            await supabase.auth.exchangeCodeForSession(window.location.href);
+          } else if (access_token && refresh_token) {
+            console.log('ResetPassword DEBUG: Re-setting session from hash before update');
+            await supabase.auth.setSession({ access_token, refresh_token });
+          }
+        } catch (e) {
+          console.error('ResetPassword DEBUG: ensureSession failed', e);
+        }
+
+        const check = await supabase.auth.getSession();
+        return !!check.data.session;
+      };
+
+      const hasSession = await ensureSession();
+      if (!hasSession) {
+        setError('This reset link is invalid or expired. Please request a new one.');
+        setIsLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
+
 
       if (error) throw error;
 
