@@ -22,13 +22,17 @@ export default function ResetPassword() {
 
   // Validate token on mount
   useEffect(() => {
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    const type = searchParams.get('type');
-    const allParams = Object.fromEntries(searchParams.entries());
+    // Parse hash fragment instead of search params
+    const hash = window.location.hash.substring(1); // Remove the #
+    const hashParams = new URLSearchParams(hash);
+    
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const type = hashParams.get('type');
     
     console.log('ResetPassword DEBUG: Full URL:', window.location.href);
-    console.log('ResetPassword DEBUG: All URL params:', allParams);
+    console.log('ResetPassword DEBUG: Hash fragment:', hash);
+    console.log('ResetPassword DEBUG: Parsed hash params:', Object.fromEntries(hashParams.entries()));
     console.log('ResetPassword DEBUG: Specific params:', { 
       accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : null, 
       refreshToken: refreshToken ? `${refreshToken.substring(0, 20)}...` : null, 
@@ -56,7 +60,7 @@ export default function ResetPassword() {
         console.log('ResetPassword DEBUG: Session established successfully!');
       }
     });
-  }, [searchParams]);
+  }, []); // Remove searchParams dependency since we're not using it
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
