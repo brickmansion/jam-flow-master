@@ -15,12 +15,8 @@ serve(async (req) => {
   try {
     console.log('Processing request...');
     
-    // Check environment variables
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET');
-    
-    console.log('RESEND_API_KEY exists:', !!resendKey);
-    console.log('SEND_EMAIL_HOOK_SECRET exists:', !!hookSecret);
     
     if (!resendKey) {
       throw new Error('RESEND_API_KEY not found');
@@ -33,14 +29,67 @@ serve(async (req) => {
     const payload = await req.text();
     console.log('Payload received, length:', payload.length);
     
-    // For now, just return success to test if the function can run
-    console.log('Function completed successfully');
+    // Parse the webhook payload
+    const data = JSON.parse(payload);
+    console.log('Parsed payload data:', JSON.stringify(data, null, 2));
+    
+    const { user, email_data } = data;
+    const { token_hash, redirect_to = 'https://6c1fe617-e800-45c7-84f0-6ca73e3e21c2.lovableproject.com/reset-password' } = email_data;
+    
+    if (!user?.email) {
+      throw new Error('No user email found in payload');
+    }
+    
+    console.log('Sending reset email to:', user.email);
+    
+    // Create reset URL
+    const resetUrl = `https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token=${token_hash}&type=recovery&redirect_to=${encodeURIComponent(redirect_to)}`;
+    
+    // Send email using fetch (simple approach)
+    const emailResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'SeshPrep <noreply@resend.dev>',
+        to: [user.email],
+        subject: 'Reset your password',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333; margin-bottom: 20px;">Reset Your Password</h1>
+            <p style="color: #666; line-height: 1.6;">
+              You requested to reset your password. Click the button below to reset it:
+            </p>
+            <a href="${resetUrl}" 
+               style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0;">
+              Reset Password
+            </a>
+            <p style="color: #666; line-height: 1.6;">
+              If you didn't request this, you can safely ignore this email.
+            </p>
+            <p style="color: #666; line-height: 1.6;">
+              This link will expire in 1 hour for security reasons.
+            </p>
+          </div>
+        `,
+      }),
+    });
+    
+    const emailResult = await emailResponse.json();
+    console.log('Email send response:', emailResult);
+    
+    if (!emailResponse.ok) {
+      throw new Error(`Failed to send email: ${emailResult.message || 'Unknown error'}`);
+    }
+    
+    console.log('Password reset email sent successfully');
     
     return new Response(JSON.stringify({ 
       success: true, 
-      message: 'Function is working',
-      hasResendKey: !!resendKey,
-      hasHookSecret: !!hookSecret
+      message: 'Password reset email sent successfully',
+      emailId: emailResult.id
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
