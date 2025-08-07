@@ -34,6 +34,19 @@ serve(async (req) => {
     console.log('Parsed payload data:', JSON.stringify(data, null, 2));
     
     const { user, email_data } = data;
+    
+    // Check if this is a password recovery email
+    if (!email_data || !email_data.token_hash) {
+      console.log('No email_data or token_hash found - likely a signup confirmation, skipping...');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Signup confirmation handled by Supabase default'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
     const { token_hash, redirect_to = 'https://6c1fe617-e800-45c7-84f0-6ca73e3e21c2.lovableproject.com/reset-password' } = email_data;
     
     if (!user?.email) {
