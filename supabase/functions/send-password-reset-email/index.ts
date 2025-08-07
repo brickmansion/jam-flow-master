@@ -42,7 +42,7 @@ serve(async (req) => {
     
     console.log('Sending reset email to:', user.email);
     
-    // Create reset URL
+    // Create reset URL - use the token directly in the URL
     const resetUrl = `https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token=${token_hash}&type=recovery&redirect_to=${encodeURIComponent(redirect_to)}`;
     
     // Send email using fetch (simple approach)
