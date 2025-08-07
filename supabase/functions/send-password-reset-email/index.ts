@@ -26,8 +26,23 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('=== Password Reset Email Function Started ===')
+    console.log('Environment check:')
+    console.log('- RESEND_API_KEY present:', !!Deno.env.get('RESEND_API_KEY'))
+    console.log('- SEND_EMAIL_HOOK_SECRET present:', !!Deno.env.get('SEND_EMAIL_HOOK_SECRET'))
+    
     const payload = await req.text()
     const headers = Object.fromEntries(req.headers)
+    
+    console.log('Request details:')
+    console.log('- Payload length:', payload.length)
+    console.log('- Headers keys:', Object.keys(headers))
+    
+    if (!hookSecret) {
+      console.error('SEND_EMAIL_HOOK_SECRET is missing!')
+      throw new Error('Missing webhook secret configuration')
+    }
+    
     const wh = new Webhook(hookSecret)
     
     console.log('Received webhook payload length:', payload.length)
