@@ -54,10 +54,20 @@ export default function ResetPassword() {
       const access_token = hashParams.get('access_token');
       const refresh_token = hashParams.get('refresh_token');
       if (access_token && !refresh_token && !code) {
-        console.log('ResetPassword DEBUG: Detected token_hash without refresh token, redirecting to Supabase verify');
-        const redirectTo = `${window.location.origin}/reset-password`;
-        window.location.replace(`https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token_hash=${access_token}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`);
-        return; // Stop here; page will reload after verification
+        console.log('ResetPassword DEBUG: Using verifyOtp with token_hash to establish session');
+        try {
+          const { data, error } = await supabase.auth.verifyOtp({
+            type: 'recovery',
+            token_hash: access_token
+          });
+          if (error) {
+            console.error('ResetPassword DEBUG: verifyOtp failed', error);
+          } else {
+            console.log('ResetPassword DEBUG: verifyOtp success, session established?', !!data.session);
+          }
+        } catch (e) {
+          console.error('ResetPassword DEBUG: verifyOtp threw', e);
+        }
       }
 
       // 3) Legacy flow: access_token and refresh_token present in hash
@@ -124,6 +134,9 @@ export default function ResetPassword() {
           } else if (access_token && refresh_token) {
             console.log('ResetPassword DEBUG: Re-setting session from hash before update');
             await supabase.auth.setSession({ access_token, refresh_token });
+          } else if (access_token && !refresh_token) {
+            console.log('ResetPassword DEBUG: Re-verifying token_hash via verifyOtp before update');
+            await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
           }
         } catch (e) {
           console.error('ResetPassword DEBUG: ensureSession failed', e);
