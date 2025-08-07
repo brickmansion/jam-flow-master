@@ -31,13 +31,22 @@ export default function Auth() {
     role: 'producer' as 'producer' | 'assistant'
   });
 
-  // Check for invitation token on mount
+  // Check for invitation token and reset success on mount
   useEffect(() => {
     const token = searchParams.get('token');
+    const resetSuccess = searchParams.get('reset');
+    
     if (token) {
       validateInvitationToken(token);
     }
-  }, [searchParams]);
+    
+    if (resetSuccess === 'success') {
+      toast({
+        title: "Password reset successful",
+        description: "Please log in with your new password.",
+      });
+    }
+  }, [searchParams, toast]);
 
   const validateInvitationToken = async (token: string) => {
     try {
@@ -167,7 +176,7 @@ export default function Auth() {
         </CardHeader>
         
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs defaultValue={searchParams.get('reset') === 'success' ? 'signin' : 'signin'} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
