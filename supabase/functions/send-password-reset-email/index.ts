@@ -35,12 +35,42 @@ serve(async (req) => {
     
     const { user, email_data } = data;
     
-    // Check if this is a password recovery email
+    // Check if this is a password recovery email (has token_hash)
     if (!email_data || !email_data.token_hash) {
-      console.log('No email_data or token_hash found - likely a signup confirmation, skipping...');
+      console.log('No email_data or token_hash found - likely a signup confirmation');
+      
+      // Handle signup confirmation
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'SeshPrep <noreply@resend.dev>',
+          to: [user.email],
+          subject: 'Welcome to SeshPrep - Confirm your email',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #333; margin-bottom: 20px;">Welcome to SeshPrep!</h1>
+              <p style="color: #666; line-height: 1.6;">
+                Thank you for signing up! Your account has been created and you can now start using SeshPrep.
+              </p>
+              <p style="color: #666; line-height: 1.6;">
+                If you didn't create this account, you can safely ignore this email.
+              </p>
+            </div>
+          `,
+        }),
+      });
+      
+      const signupResult = await emailResponse.json();
+      console.log('Signup confirmation email sent:', signupResult);
+      
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'Signup confirmation handled by Supabase default'
+        message: 'Signup confirmation sent',
+        emailId: signupResult.id
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
