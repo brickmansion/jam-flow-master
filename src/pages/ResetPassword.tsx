@@ -20,27 +20,61 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
 
-  // Validate token on mount
+  // Validate token on mount and ensure session is established
   useEffect(() => {
-    // Parse hash fragment instead of search params
-    const hash = window.location.hash.substring(1); // Remove the #
-    const hashParams = new URLSearchParams(hash);
-    
-    const type = hashParams.get('type');
-    
-    console.log('ResetPassword DEBUG: Full URL:', window.location.href);
-    console.log('ResetPassword DEBUG: Hash fragment:', hash);
-    console.log('ResetPassword DEBUG: Type param:', type);
-    
-    if (type !== 'recovery') {
-      console.log('ResetPassword DEBUG: Not a recovery link');
-      setIsValidToken(false);
-      return;
-    }
+    const init = async () => {
+      // Parse both hash fragment and query params (covers both token and code flows)
+      const url = new URL(window.location.href);
+      const hash = url.hash.substring(1); // Remove the #
+      const hashParams = new URLSearchParams(hash);
+      const type = hashParams.get('type') || url.searchParams.get('type');
 
-    // No need to call setSession - Supabase handles this automatically in 2024+
-    console.log('ResetPassword DEBUG: Recovery link detected, showing form');
-    setIsValidToken(true);
+      console.log('ResetPassword DEBUG: Full URL:', window.location.href);
+      console.log('ResetPassword DEBUG: Hash fragment:', hash);
+      console.log('ResetPassword DEBUG: Type param:', type);
+
+      if (type !== 'recovery') {
+        console.log('ResetPassword DEBUG: Not a recovery link');
+        setIsValidToken(false);
+        return;
+      }
+
+      // 1) Newer PKCE flow: ?code=... in the URL (no tokens in hash)
+      const code = url.searchParams.get('code');
+      if (code) {
+        console.log('ResetPassword DEBUG: Found code param, exchanging for session');
+        try {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+        } catch (e) {
+          console.error('ResetPassword DEBUG: exchangeCodeForSession failed', e);
+        }
+      }
+
+      // 2) Legacy flow: access_token and refresh_token present in hash
+      const access_token = hashParams.get('access_token');
+      const refresh_token = hashParams.get('refresh_token');
+      if (access_token && refresh_token) {
+        console.log('ResetPassword DEBUG: Found tokens in hash, setting session');
+        try {
+          await supabase.auth.setSession({ access_token, refresh_token });
+        } catch (e) {
+          console.error('ResetPassword DEBUG: setSession failed', e);
+        }
+      }
+
+      // Verify session exists now
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('ResetPassword DEBUG: No session after processing link');
+        setIsValidToken(false);
+        return;
+      }
+
+      console.log('ResetPassword DEBUG: Recovery link detected and session present, showing form');
+      setIsValidToken(true);
+    };
+
+    void init();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
