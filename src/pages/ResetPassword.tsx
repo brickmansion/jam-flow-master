@@ -121,6 +121,15 @@ export default function ResetPassword() {
       }
 
       console.log('ResetPassword DEBUG: Recovery link detected and session present, showing form');
+      // If we have a password saved from a previous attempt, auto-populate and try update
+      const pendingPass = sessionStorage.getItem('pending_password');
+      const pendingConfirm = sessionStorage.getItem('pending_confirm');
+      if (pendingPass && pendingConfirm) {
+        setPassword(pendingPass);
+        setConfirmPassword(pendingConfirm);
+        sessionStorage.removeItem('pending_password');
+        sessionStorage.removeItem('pending_confirm');
+      }
       setIsValidToken(true);
     };
 
@@ -196,8 +205,42 @@ export default function ResetPassword() {
 
       const { error } = await supabase.auth.updateUser({ password });
 
+      if (error) {
+        // If auth session missing, try one more robust recovery path
+        if (String(error.message).toLowerCase().includes('auth session missing')) {
+          const url = new URL(window.location.href);
+          const hash = url.hash.substring(1);
+          const hashParams = new URLSearchParams(hash);
+          const access_token = hashParams.get('access_token');
+          const refresh_token = hashParams.get('refresh_token');
 
-      if (error) throw error;
+          // Save password to restore after bounce
+          sessionStorage.setItem('pending_password', password);
+          sessionStorage.setItem('pending_confirm', confirmPassword);
+
+          if (refresh_token && access_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+            const retry = await supabase.auth.updateUser({ password });
+            if (retry.error) throw retry.error;
+          } else if (access_token) {
+            const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
+            if (isLikelyOtp) {
+              if (!email) throw error;
+              await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
+              const retry = await supabase.auth.updateUser({ password });
+              if (retry.error) throw retry.error;
+            } else {
+              const redirectTo = `${window.location.origin}/reset-password`;
+              window.location.replace(`https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token_hash=${access_token}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`);
+              return;
+            }
+          } else {
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
 
       toast({
         title: "Password updated",
