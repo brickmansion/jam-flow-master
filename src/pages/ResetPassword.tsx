@@ -19,7 +19,8 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
-
+  const [email, setEmail] = useState('');
+  const [needsEmail, setNeedsEmail] = useState(false);
   // Validate token on mount and ensure session is established
   useEffect(() => {
     const init = async () => {
@@ -32,6 +33,11 @@ export default function ResetPassword() {
       console.log('ResetPassword DEBUG: Full URL:', window.location.href);
       console.log('ResetPassword DEBUG: Hash fragment:', hash);
       console.log('ResetPassword DEBUG: Type param:', type);
+
+      const emailParam = url.searchParams.get('email') || localStorage.getItem('reset_email') || '';
+      if (emailParam) {
+        setEmail(emailParam);
+      }
 
       if (type !== 'recovery') {
         console.log('ResetPassword DEBUG: Not a recovery link');
@@ -54,19 +60,38 @@ export default function ResetPassword() {
       const access_token = hashParams.get('access_token');
       const refresh_token = hashParams.get('refresh_token');
       if (access_token && !refresh_token && !code) {
-        console.log('ResetPassword DEBUG: Using verifyOtp with token_hash to establish session');
-        try {
-          const { data, error } = await supabase.auth.verifyOtp({
-            type: 'recovery',
-            token_hash: access_token
-          });
-          if (error) {
-            console.error('ResetPassword DEBUG: verifyOtp failed', error);
+        const token = access_token;
+        const isLikelyOtp = /^[0-9]{6}$/.test(token) || token.length < 40;
+        if (isLikelyOtp) {
+          console.log('ResetPassword DEBUG: Detected OTP-style token, attempting verifyOtp with email');
+          if (emailParam) {
+            try {
+              const { data, error } = await supabase.auth.verifyOtp({
+                type: 'recovery',
+                token,
+                email: emailParam
+              });
+              if (error) console.error('ResetPassword DEBUG: verifyOtp (OTP) failed', error);
+              else console.log('ResetPassword DEBUG: verifyOtp (OTP) success, session?', !!data.session);
+            } catch (e) {
+              console.error('ResetPassword DEBUG: verifyOtp (OTP) threw', e);
+            }
           } else {
-            console.log('ResetPassword DEBUG: verifyOtp success, session established?', !!data.session);
+            console.warn('ResetPassword DEBUG: OTP token present but no email available; prompting for email');
+            setNeedsEmail(true);
           }
-        } catch (e) {
-          console.error('ResetPassword DEBUG: verifyOtp threw', e);
+        } else {
+          console.log('ResetPassword DEBUG: Detected token_hash, verifying via verifyOtp');
+          try {
+            const { data, error } = await supabase.auth.verifyOtp({
+              type: 'recovery',
+              token_hash: token
+            });
+            if (error) console.error('ResetPassword DEBUG: verifyOtp (hash) failed', error);
+            else console.log('ResetPassword DEBUG: verifyOtp (hash) success, session?', !!data.session);
+          } catch (e) {
+            console.error('ResetPassword DEBUG: verifyOtp (hash) threw', e);
+          }
         }
       }
 
@@ -83,6 +108,13 @@ export default function ResetPassword() {
       // Verify session exists now
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        const isLikelyOtp = access_token && !refresh_token && !code && (/^[0-9]{6}$/.test(access_token) || access_token.length < 40);
+        if (isLikelyOtp && !emailParam) {
+          console.warn('ResetPassword DEBUG: No session yet; awaiting user email to verify OTP');
+          setNeedsEmail(true);
+          setIsValidToken(true);
+          return;
+        }
         console.warn('ResetPassword DEBUG: No session after processing link');
         setIsValidToken(false);
         return;
@@ -135,8 +167,17 @@ export default function ResetPassword() {
             console.log('ResetPassword DEBUG: Re-setting session from hash before update');
             await supabase.auth.setSession({ access_token, refresh_token });
           } else if (access_token && !refresh_token) {
-            console.log('ResetPassword DEBUG: Re-verifying token_hash via verifyOtp before update');
-            await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
+            const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
+            if (isLikelyOtp) {
+              if (!email) {
+                throw new Error('Please enter the email you requested the reset with, then try again.');
+              }
+              console.log('ResetPassword DEBUG: Verifying OTP with email before update');
+              await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
+            } else {
+              console.log('ResetPassword DEBUG: Verifying token_hash before update');
+              await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
+            }
           }
         } catch (e) {
           console.error('ResetPassword DEBUG: ensureSession failed', e);
@@ -206,6 +247,19 @@ export default function ResetPassword() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {needsEmail && (
+              <div className="space-y-2">
+                <Label htmlFor="resetEmail">Email used for reset</Label>
+                <Input
+                  id="resetEmail"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
               <Input
@@ -241,7 +295,7 @@ export default function ResetPassword() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isLoading || !password || !confirmPassword}
+              disabled={isLoading || !password || !confirmPassword || (needsEmail && !email)}
             >
               {isLoading ? 'Updating...' : 'Update Password'}
             </Button>

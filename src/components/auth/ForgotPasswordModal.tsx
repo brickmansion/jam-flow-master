@@ -26,8 +26,10 @@ export function ForgotPasswordModal({ open, onOpenChange }: ForgotPasswordModalP
     setError(null);
 
     try {
+      const redirectTo = `${APP_URL}/reset-password?email=${encodeURIComponent(email)}`;
+      localStorage.setItem('reset_email', email);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${APP_URL}/reset-password`,
+        redirectTo,
       });
 
       if (error) {
@@ -57,33 +59,6 @@ export function ForgotPasswordModal({ open, onOpenChange }: ForgotPasswordModalP
     setIsSuccess(false);
     onOpenChange(false);
   };
-
-  if (isSuccess) {
-    return (
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Check your email</DialogTitle>
-            <DialogDescription>
-              We've sent a password reset link to <strong>{email}</strong>
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                Click the link in your email to reset your password. The link will expire in 1 hour.
-              </AlertDescription>
-            </Alert>
-            
-            <Button onClick={handleClose} className="w-full">
-              Continue
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
