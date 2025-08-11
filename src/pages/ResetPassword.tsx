@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
   const [password, setPassword] = useState('');
@@ -19,121 +18,41 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
-  const [email, setEmail] = useState('');
-  const [needsEmail, setNeedsEmail] = useState(false);
-  // Validate token on mount and ensure session is established
+
+  // On component mount, we check for a recovery code in the URL.
+  // If present, we exchange it for a session, which is required to update the user's password.
   useEffect(() => {
-    const init = async () => {
-      // Parse both hash fragment and query params (covers both token and code flows)
+    const exchangeCodeForSession = async () => {
       const url = new URL(window.location.href);
-      const hash = url.hash.substring(1); // Remove the #
-      const hashParams = new URLSearchParams(hash);
-      const type = hashParams.get('type') || url.searchParams.get('type');
+      const code = url.searchParams.get('code');
 
-      console.log('ResetPassword DEBUG: Full URL:', window.location.href);
-      console.log('ResetPassword DEBUG: Hash fragment:', hash);
-      console.log('ResetPassword DEBUG: Type param:', type);
-
-      const emailParam = url.searchParams.get('email') || localStorage.getItem('reset_email') || '';
-      if (emailParam) {
-        setEmail(emailParam);
-      }
-
-      if (type !== 'recovery') {
-        console.log('ResetPassword DEBUG: Not a recovery link');
+      // If no code is present, the link is invalid.
+      if (!code) {
+        console.warn('ResetPassword DEBUG: No code found in URL.');
         setIsValidToken(false);
         return;
       }
 
-      // 1) Newer PKCE flow: ?code=... in the URL (no tokens in hash)
-      const code = url.searchParams.get('code');
-      if (code) {
-        console.log('ResetPassword DEBUG: Found code param, exchanging for session');
-        try {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
-        } catch (e) {
-          console.error('ResetPassword DEBUG: exchangeCodeForSession failed', e);
-        }
-      }
-
-      // 2) Fallback: some older/custom emails pass token_hash as access_token only
-      const access_token = hashParams.get('access_token');
-      const refresh_token = hashParams.get('refresh_token');
-      if (access_token && !refresh_token && !code) {
-        const token = access_token;
-        const isLikelyOtp = /^[0-9]{6}$/.test(token) || token.length < 40;
-        if (isLikelyOtp) {
-          console.log('ResetPassword DEBUG: Detected OTP-style token, attempting verifyOtp with email');
-          if (emailParam) {
-            try {
-              const { data, error } = await supabase.auth.verifyOtp({
-                type: 'recovery',
-                token,
-                email: emailParam
-              });
-              if (error) console.error('ResetPassword DEBUG: verifyOtp (OTP) failed', error);
-              else console.log('ResetPassword DEBUG: verifyOtp (OTP) success, session?', !!data.session);
-            } catch (e) {
-              console.error('ResetPassword DEBUG: verifyOtp (OTP) threw', e);
-            }
-          } else {
-            console.warn('ResetPassword DEBUG: OTP token present but no email available; prompting for email');
-            setNeedsEmail(true);
-          }
-        } else {
-          console.log('ResetPassword DEBUG: Detected token_hash, verifying via verifyOtp');
-          try {
-            const { data, error } = await supabase.auth.verifyOtp({
-              type: 'recovery',
-              token_hash: token
-            });
-            if (error) console.error('ResetPassword DEBUG: verifyOtp (hash) failed', error);
-            else console.log('ResetPassword DEBUG: verifyOtp (hash) success, session?', !!data.session);
-          } catch (e) {
-            console.error('ResetPassword DEBUG: verifyOtp (hash) threw', e);
-          }
-        }
-      }
-
-      // 3) Legacy flow: access_token and refresh_token present in hash
-      if (access_token && refresh_token) {
-        console.log('ResetPassword DEBUG: Found tokens in hash, setting session');
-        try {
-          await supabase.auth.setSession({ access_token, refresh_token });
-        } catch (e) {
-          console.error('ResetPassword DEBUG: setSession failed', e);
-        }
-      }
-
-      // Verify session exists now
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const isLikelyOtp = access_token && !refresh_token && !code && (/^[0-9]{6}$/.test(access_token) || access_token.length < 40);
-        if (isLikelyOtp && !emailParam) {
-          console.warn('ResetPassword DEBUG: No session yet; awaiting user email to verify OTP');
-          setNeedsEmail(true);
-          setIsValidToken(true);
+      try {
+        // Exchange the code for a session. Supabase handles the rest.
+        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        if (error) {
+          console.error('ResetPassword DEBUG: exchangeCodeForSession failed', error);
+          setIsValidToken(false);
           return;
         }
-        console.warn('ResetPassword DEBUG: No session after processing link');
-        setIsValidToken(false);
-        return;
-      }
 
-      console.log('ResetPassword DEBUG: Recovery link detected and session present, showing form');
-      // If we have a password saved from a previous attempt, auto-populate and try update
-      const pendingPass = sessionStorage.getItem('pending_password');
-      const pendingConfirm = sessionStorage.getItem('pending_confirm');
-      if (pendingPass && pendingConfirm) {
-        setPassword(pendingPass);
-        setConfirmPassword(pendingConfirm);
-        sessionStorage.removeItem('pending_password');
-        sessionStorage.removeItem('pending_confirm');
+        // Session successfully established.
+        console.log('ResetPassword DEBUG: Session successfully established from code.');
+        setIsValidToken(true);
+
+      } catch (e) {
+        console.error('ResetPassword DEBUG: An unexpected error occurred during code exchange.', e);
+        setIsValidToken(false);
       }
-      setIsValidToken(true);
     };
 
-    void init();
+    void exchangeCodeForSession();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,14 +60,12 @@ export default function ResetPassword() {
     setIsLoading(true);
     setError(null);
 
-    // Validate password requirements
     if (password.length < 8) {
       setError('Password must be at least 8 characters');
       setIsLoading(false);
       return;
     }
 
-    // Validate password match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       setIsLoading(false);
@@ -156,90 +73,16 @@ export default function ResetPassword() {
     }
 
     try {
-      // Ensure we have an auth session before updating the password
-      const ensureSession = async () => {
-        const url = new URL(window.location.href);
-        const hash = url.hash.substring(1);
-        const hashParams = new URLSearchParams(hash);
-        const code = url.searchParams.get('code');
-        const access_token = hashParams.get('access_token');
-        const refresh_token = hashParams.get('refresh_token');
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) return true;
-
-        try {
-          if (code) {
-            console.log('ResetPassword DEBUG: Re-exchanging code for session before update');
-            await supabase.auth.exchangeCodeForSession(window.location.href);
-          } else if (access_token && refresh_token) {
-            console.log('ResetPassword DEBUG: Re-setting session from hash before update');
-            await supabase.auth.setSession({ access_token, refresh_token });
-          } else if (access_token && !refresh_token) {
-            const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
-            if (isLikelyOtp) {
-              if (!email) {
-                throw new Error('Please enter the email you requested the reset with, then try again.');
-              }
-              console.log('ResetPassword DEBUG: Verifying OTP with email before update');
-              await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
-            } else {
-              console.log('ResetPassword DEBUG: Verifying token_hash before update');
-              await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
-            }
-          }
-        } catch (e) {
-          console.error('ResetPassword DEBUG: ensureSession failed', e);
-        }
-
-        const check = await supabase.auth.getSession();
-        return !!check.data.session;
-      };
-
-      const hasSession = await ensureSession();
-      if (!hasSession) {
-        setError('This reset link is invalid or expired. Please request a new one.');
-        setIsLoading(false);
-        return;
-      }
-
+      // The session should already be established from the useEffect hook.
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        // If auth session missing, try one more robust recovery path
-        if (String(error.message).toLowerCase().includes('auth session missing')) {
-          const url = new URL(window.location.href);
-          const hash = url.hash.substring(1);
-          const hashParams = new URLSearchParams(hash);
-          const access_token = hashParams.get('access_token');
-          const refresh_token = hashParams.get('refresh_token');
-
-          // Save password to restore after bounce
-          sessionStorage.setItem('pending_password', password);
-          sessionStorage.setItem('pending_confirm', confirmPassword);
-
-          if (refresh_token && access_token) {
-            await supabase.auth.setSession({ access_token, refresh_token });
-            const retry = await supabase.auth.updateUser({ password });
-            if (retry.error) throw retry.error;
-          } else if (access_token) {
-            const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
-            if (isLikelyOtp) {
-              if (!email) throw error;
-              await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
-              const retry = await supabase.auth.updateUser({ password });
-              if (retry.error) throw retry.error;
-            } else {
-              const redirectTo = `${window.location.origin}/reset-password`;
-              window.location.replace(`https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token_hash=${access_token}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`);
-              return;
-            }
-          } else {
-            throw error;
-          }
-        } else {
-          throw error;
-        }
+        // The most likely error here is that the session is missing or expired.
+        // We'll show a generic error message and let the user try again.
+        console.error('ResetPassword DEBUG: updateUser failed', error);
+        setError('Your session has expired. Please request a new password reset link.');
+        setIsLoading(false);
+        return;
       }
 
       toast({
@@ -255,12 +98,12 @@ export default function ResetPassword() {
     }
   };
 
-  // Render nothing while exchanging token
+  // Render a loading state or nothing while we validate the token.
   if (isValidToken === null) {
     return null;
   }
 
-  // Show invalid token state
+  // If the token is invalid, show an error message.
   if (isValidToken === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
@@ -280,7 +123,7 @@ export default function ResetPassword() {
     );
   }
 
-  // Show password reset form
+  // Otherwise, show the password reset form.
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
       <Card className="w-full max-w-md">
@@ -290,19 +133,6 @@ export default function ResetPassword() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {needsEmail && (
-              <div className="space-y-2">
-                <Label htmlFor="resetEmail">Email used for reset</Label>
-                <Input
-                  id="resetEmail"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
               <Input
@@ -338,7 +168,7 @@ export default function ResetPassword() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isLoading || !password || !confirmPassword || (needsEmail && !email)}
+              disabled={isLoading || !password || !confirmPassword}
             >
               {isLoading ? 'Updating...' : 'Update Password'}
             </Button>
