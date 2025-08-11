@@ -45,6 +45,18 @@ export default function ResetPassword() {
         return;
       }
 
+      // 0) New recovery style: ?token_hash=...&type=recovery
+      const token_hash_param = url.searchParams.get('token_hash');
+      if (type === 'recovery' && token_hash_param) {
+        console.log('ResetPassword DEBUG: Detected token_hash link, verifying via verifyOtp');
+        try {
+          const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token_hash_param });
+          console.log('ResetPassword DEBUG: verifyOtp(token_hash) result:', { hasSession: !!data?.session, error });
+        } catch (e) {
+          console.error('ResetPassword DEBUG: verifyOtp(token_hash) threw', e);
+        }
+      }
+
       // 1) Newer PKCE flow: ?code=... in the URL (no tokens in hash)
       const code = url.searchParams.get('code');
       if (code) {
@@ -56,60 +68,52 @@ export default function ResetPassword() {
         }
       }
 
-      // 2) Fallback: some older/custom emails pass token_hash as access_token only
+      // 2) Legacy implicit grant or OTP/token_hash in hash fragment
       const access_token = hashParams.get('access_token');
       const refresh_token = hashParams.get('refresh_token');
-      if (access_token && !refresh_token && !code) {
+      if (access_token && refresh_token) {
+        console.log('ResetPassword DEBUG: Found tokens in hash, setting session via setSession');
+        try {
+          await supabase.auth.setSession({ access_token, refresh_token });
+          // Clean the hash for nicer URL
+          history.replaceState(null, '', url.pathname + url.search);
+        } catch (e) {
+          console.error('ResetPassword DEBUG: setSession failed', e);
+        }
+      } else if (access_token && !refresh_token && !code) {
         const token = access_token;
         const isLikelyOtp = /^[0-9]{6}$/.test(token) || token.length < 40;
         if (isLikelyOtp) {
-          console.log('ResetPassword DEBUG: Detected OTP-style token, attempting verifyOtp with email');
+          console.log('ResetPassword DEBUG: Detected OTP-style token in hash, attempting verifyOtp with email');
           if (emailParam) {
             try {
-              const { data, error } = await supabase.auth.verifyOtp({
-                type: 'recovery',
-                token,
-                email: emailParam
-              });
-              if (error) console.error('ResetPassword DEBUG: verifyOtp (OTP) failed', error);
-              else console.log('ResetPassword DEBUG: verifyOtp (OTP) success, session?', !!data.session);
+              const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token, email: emailParam });
+              console.log('ResetPassword DEBUG: verifyOtp(OTP) result:', { hasSession: !!data?.session, error });
             } catch (e) {
-              console.error('ResetPassword DEBUG: verifyOtp (OTP) threw', e);
+              console.error('ResetPassword DEBUG: verifyOtp(OTP) threw', e);
             }
           } else {
             console.warn('ResetPassword DEBUG: OTP token present but no email available; prompting for email');
             setNeedsEmail(true);
           }
         } else {
-          console.log('ResetPassword DEBUG: Detected token_hash, verifying via verifyOtp');
+          console.log('ResetPassword DEBUG: Detected token_hash in hash, verifying via verifyOtp');
           try {
-            const { data, error } = await supabase.auth.verifyOtp({
-              type: 'recovery',
-              token_hash: token
-            });
-            if (error) console.error('ResetPassword DEBUG: verifyOtp (hash) failed', error);
-            else console.log('ResetPassword DEBUG: verifyOtp (hash) success, session?', !!data.session);
+            const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token });
+            console.log('ResetPassword DEBUG: verifyOtp(token_hash-from-hash) result:', { hasSession: !!data?.session, error });
           } catch (e) {
-            console.error('ResetPassword DEBUG: verifyOtp (hash) threw', e);
+            console.error('ResetPassword DEBUG: verifyOtp(token_hash-from-hash) threw', e);
           }
-        }
-      }
-
-      // 3) Legacy flow: access_token and refresh_token present in hash
-      if (access_token && refresh_token) {
-        console.log('ResetPassword DEBUG: Found tokens in hash, setting session');
-        try {
-          await supabase.auth.setSession({ access_token, refresh_token });
-        } catch (e) {
-          console.error('ResetPassword DEBUG: setSession failed', e);
         }
       }
 
       // Verify session exists now
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        const isLikelyOtp = access_token && !refresh_token && !code && (/^[0-9]{6}$/.test(access_token) || access_token.length < 40);
-        if (isLikelyOtp && !emailParam) {
+        const hashAfter = new URLSearchParams((new URL(window.location.href)).hash.substring(1));
+        const access_token_hash = hashAfter.get('access_token') || url.searchParams.get('access_token');
+        const codeLikeOtp = access_token_hash && (/^[0-9]{6}$/.test(access_token_hash) || String(access_token_hash).length < 40);
+        if (codeLikeOtp && !emailParam) {
           console.warn('ResetPassword DEBUG: No session yet; awaiting user email to verify OTP');
           setNeedsEmail(true);
           setIsValidToken(true);
@@ -162,30 +166,37 @@ export default function ResetPassword() {
         const hash = url.hash.substring(1);
         const hashParams = new URLSearchParams(hash);
         const code = url.searchParams.get('code');
-        const access_token = hashParams.get('access_token');
-        const refresh_token = hashParams.get('refresh_token');
+        const token_hash_qp = url.searchParams.get('token_hash');
+        const type_qp = url.searchParams.get('type');
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session) return true;
 
         try {
-          if (code) {
+          if (type_qp === 'recovery' && token_hash_qp) {
+            console.log('ResetPassword DEBUG: ensureSession: verifying token_hash from query before update');
+            await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token_hash_qp });
+          } else if (code) {
             console.log('ResetPassword DEBUG: Re-exchanging code for session before update');
             await supabase.auth.exchangeCodeForSession(window.location.href);
-          } else if (access_token && refresh_token) {
-            console.log('ResetPassword DEBUG: Re-setting session from hash before update');
-            await supabase.auth.setSession({ access_token, refresh_token });
-          } else if (access_token && !refresh_token) {
-            const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
-            if (isLikelyOtp) {
-              if (!email) {
-                throw new Error('Please enter the email you requested the reset with, then try again.');
+          } else {
+            const access_token = hashParams.get('access_token');
+            const refresh_token = hashParams.get('refresh_token');
+            if (access_token && refresh_token) {
+              console.log('ResetPassword DEBUG: Re-setting session from hash before update');
+              await supabase.auth.setSession({ access_token, refresh_token });
+            } else if (access_token) {
+              const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
+              if (isLikelyOtp) {
+                if (!email) {
+                  throw new Error('Please enter the email you requested the reset with, then try again.');
+                }
+                console.log('ResetPassword DEBUG: Verifying OTP with email before update');
+                await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
+              } else {
+                console.log('ResetPassword DEBUG: Verifying token_hash before update');
+                await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
               }
-              console.log('ResetPassword DEBUG: Verifying OTP with email before update');
-              await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
-            } else {
-              console.log('ResetPassword DEBUG: Verifying token_hash before update');
-              await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
             }
           }
         } catch (e) {
@@ -193,6 +204,7 @@ export default function ResetPassword() {
         }
 
         const check = await supabase.auth.getSession();
+        console.log('ResetPassword DEBUG: ensureSession post-check hasSession?', !!check.data.session);
         return !!check.data.session;
       };
 
@@ -202,6 +214,9 @@ export default function ResetPassword() {
         setIsLoading(false);
         return;
       }
+
+      const sessionBefore = await supabase.auth.getSession();
+      console.log('ResetPassword DEBUG: getSession before updateUser:', !!sessionBefore.data.session);
 
       const { error } = await supabase.auth.updateUser({ password });
 
