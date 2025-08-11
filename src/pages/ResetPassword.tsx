@@ -52,8 +52,22 @@ export default function ResetPassword() {
         try {
           const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token_hash_param });
           console.log('ResetPassword DEBUG: verifyOtp(token_hash) result:', { hasSession: !!data?.session, error });
-        } catch (e) {
+          if (error) {
+            setIsValidToken(false);
+            setError(error.message);
+            return;
+          }
+          if (data?.session) {
+            await supabase.auth.setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            });
+          }
+        } catch (e: any) {
           console.error('ResetPassword DEBUG: verifyOtp(token_hash) threw', e);
+          setIsValidToken(false);
+          setError(e?.message || 'Invalid or expired recovery link.');
+          return;
         }
       }
 
@@ -89,8 +103,22 @@ export default function ResetPassword() {
             try {
               const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token, email: emailParam });
               console.log('ResetPassword DEBUG: verifyOtp(OTP) result:', { hasSession: !!data?.session, error });
-            } catch (e) {
+              if (error) {
+                setIsValidToken(false);
+                setError(error.message);
+                return;
+              }
+              if (data?.session) {
+                await supabase.auth.setSession({
+                  access_token: data.session.access_token,
+                  refresh_token: data.session.refresh_token,
+                });
+              }
+            } catch (e: any) {
               console.error('ResetPassword DEBUG: verifyOtp(OTP) threw', e);
+              setIsValidToken(false);
+              setError(e?.message || 'Invalid or expired recovery link.');
+              return;
             }
           } else {
             console.warn('ResetPassword DEBUG: OTP token present but no email available; prompting for email');
@@ -98,12 +126,26 @@ export default function ResetPassword() {
           }
         } else {
           console.log('ResetPassword DEBUG: Detected token_hash in hash, verifying via verifyOtp');
-          try {
-            const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token });
-            console.log('ResetPassword DEBUG: verifyOtp(token_hash-from-hash) result:', { hasSession: !!data?.session, error });
-          } catch (e) {
-            console.error('ResetPassword DEBUG: verifyOtp(token_hash-from-hash) threw', e);
-          }
+            try {
+              const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token });
+              console.log('ResetPassword DEBUG: verifyOtp(token_hash-from-hash) result:', { hasSession: !!data?.session, error });
+              if (error) {
+                setIsValidToken(false);
+                setError(error.message);
+                return;
+              }
+              if (data?.session) {
+                await supabase.auth.setSession({
+                  access_token: data.session.access_token,
+                  refresh_token: data.session.refresh_token,
+                });
+              }
+            } catch (e: any) {
+              console.error('ResetPassword DEBUG: verifyOtp(token_hash-from-hash) threw', e);
+              setIsValidToken(false);
+              setError(e?.message || 'Invalid or expired recovery link.');
+              return;
+            }
         }
       }
 
@@ -175,7 +217,14 @@ export default function ResetPassword() {
         try {
           if (type_qp === 'recovery' && token_hash_qp) {
             console.log('ResetPassword DEBUG: ensureSession: verifying token_hash from query before update');
-            await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token_hash_qp });
+            const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token_hash_qp });
+            if (error) throw error;
+            if (data?.session) {
+              await supabase.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token,
+              });
+            }
           } else if (code) {
             console.log('ResetPassword DEBUG: Re-exchanging code for session before update');
             await supabase.auth.exchangeCodeForSession(window.location.href);
@@ -192,10 +241,24 @@ export default function ResetPassword() {
                   throw new Error('Please enter the email you requested the reset with, then try again.');
                 }
                 console.log('ResetPassword DEBUG: Verifying OTP with email before update');
-                await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
+                const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
+                if (error) throw error;
+                if (data?.session) {
+                  await supabase.auth.setSession({
+                    access_token: data.session.access_token,
+                    refresh_token: data.session.refresh_token,
+                  });
+                }
               } else {
                 console.log('ResetPassword DEBUG: Verifying token_hash before update');
-                await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
+                const { data, error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: access_token });
+                if (error) throw error;
+                if (data?.session) {
+                  await supabase.auth.setSession({
+                    access_token: data.session.access_token,
+                    refresh_token: data.session.refresh_token,
+                  });
+                }
               }
             }
           }
@@ -241,7 +304,14 @@ export default function ResetPassword() {
             const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
             if (isLikelyOtp) {
               if (!email) throw error;
-              await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
+              const { data, error: otpErr } = await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
+              if (otpErr) throw otpErr;
+              if (data?.session) {
+                await supabase.auth.setSession({
+                  access_token: data.session.access_token,
+                  refresh_token: data.session.refresh_token,
+                });
+              }
               const retry = await supabase.auth.updateUser({ password });
               if (retry.error) throw retry.error;
             } else {
@@ -249,9 +319,9 @@ export default function ResetPassword() {
               window.location.replace(`https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token_hash=${access_token}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`);
               return;
             }
-          } else {
-            throw error;
-          }
+            } else {
+              throw error;
+            }
         } else {
           throw error;
         }
