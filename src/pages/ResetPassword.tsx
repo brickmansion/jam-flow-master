@@ -56,46 +56,22 @@ export default function ResetPassword() {
         }
       }
 
-      // 2) Fallback: some older/custom emails pass token_hash as access_token only
+      // 2) All non-PKCE flows (e.g., from older email templates) should have a token hash.
+      // We redirect to Supabase's verification endpoint. Supabase then verifies the token
+      // and redirects back to this page with a `code` in the query string, which is
+      // then handled by the PKCE flow above. This is the most robust method.
       const access_token = hashParams.get('access_token');
-      const refresh_token = hashParams.get('refresh_token');
-      if (access_token && !refresh_token && !code) {
-        const token = access_token;
-        const isLikelyOtp = /^[0-9]{6}$/.test(token) || token.length < 40;
-        if (isLikelyOtp) {
-          console.log('ResetPassword DEBUG: Detected OTP-style token, attempting verifyOtp with email');
-          if (emailParam) {
-            try {
-              const { data, error } = await supabase.auth.verifyOtp({
-                type: 'recovery',
-                token,
-                email: emailParam
-              });
-              if (error) console.error('ResetPassword DEBUG: verifyOtp (OTP) failed', error);
-              else console.log('ResetPassword DEBUG: verifyOtp (OTP) success, session?', !!data.session);
-            } catch (e) {
-              console.error('ResetPassword DEBUG: verifyOtp (OTP) threw', e);
-            }
-          } else {
-            console.warn('ResetPassword DEBUG: OTP token present but no email available; prompting for email');
-            setNeedsEmail(true);
-          }
-        } else {
-          console.log('ResetPassword DEBUG: Detected token_hash, verifying via verifyOtp');
-          try {
-            const { data, error } = await supabase.auth.verifyOtp({
-              type: 'recovery',
-              token_hash: token
-            });
-            if (error) console.error('ResetPassword DEBUG: verifyOtp (hash) failed', error);
-            else console.log('ResetPassword DEBUG: verifyOtp (hash) success, session?', !!data.session);
-          } catch (e) {
-            console.error('ResetPassword DEBUG: verifyOtp (hash) threw', e);
-          }
-        }
+      const refresh_token = hashParams.get('refresh_token'); // Keep for legacy check
+
+      if (access_token && !code) {
+        console.log('ResetPassword DEBUG: Found token in hash, redirecting to verify endpoint.');
+        const redirectTo = `${window.location.origin}/reset-password`;
+        // The hardcoded URL is not ideal, but it matches the existing pattern in this file.
+        window.location.replace(`https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token_hash=${access_token}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`);
+        return; // Halt further execution, the page will be reloaded.
       }
 
-      // 3) Legacy flow: access_token and refresh_token present in hash
+      // 3) Legacy flow: Handle very old links that might have a full session.
       if (access_token && refresh_token) {
         console.log('ResetPassword DEBUG: Found tokens in hash, setting session');
         try {
@@ -218,25 +194,10 @@ export default function ResetPassword() {
           sessionStorage.setItem('pending_password', password);
           sessionStorage.setItem('pending_confirm', confirmPassword);
 
-          if (refresh_token && access_token) {
-            await supabase.auth.setSession({ access_token, refresh_token });
-            const retry = await supabase.auth.updateUser({ password });
-            if (retry.error) throw retry.error;
-          } else if (access_token) {
-            const isLikelyOtp = /^[0-9]{6}$/.test(access_token) || access_token.length < 40;
-            if (isLikelyOtp) {
-              if (!email) throw error;
-              await supabase.auth.verifyOtp({ type: 'recovery', token: access_token, email });
-              const retry = await supabase.auth.updateUser({ password });
-              if (retry.error) throw retry.error;
-            } else {
-              const redirectTo = `${window.location.origin}/reset-password`;
-              window.location.replace(`https://ayqvnclmnepqyhvjqxjy.supabase.co/auth/v1/verify?token_hash=${access_token}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`);
-              return;
-            }
-          } else {
-            throw error;
-          }
+          // With the new useEffect flow, if we get "auth session missing" here,
+          // it means the session that was established has become invalid.
+          // We can't recover from this, so we should just show the error.
+          throw new Error('Your session has expired. Please try the reset link again.');
         } else {
           throw error;
         }
