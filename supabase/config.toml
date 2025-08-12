@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.data-retention-cleanup]
 verify_jwt = false
+
+[functions.password-reset]
+verify_jwt = false
