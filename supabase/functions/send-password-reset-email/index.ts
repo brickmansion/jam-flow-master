@@ -77,7 +77,7 @@ serve(async (req) => {
       });
     }
     
-    const { token_hash, redirect_to = 'https://6c1fe617-e800-45c7-84f0-6ca73e3e21c2.lovableproject.com/reset-password' } = email_data;
+    const { token_hash, redirect_to = 'https://seshprep.com/reset-password' } = email_data;
     
     if (!user?.email) {
       throw new Error('No user email found in payload');

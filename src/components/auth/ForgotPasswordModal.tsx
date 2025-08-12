@@ -26,27 +26,35 @@ export function ForgotPasswordModal({ open, onOpenChange }: ForgotPasswordModalP
     setError(null);
 
     try {
-      const redirectTo = `${APP_URL}/reset-password?email=${encodeURIComponent(email)}`;
+      // Persist email locally to help the reset page if OTP flow requires it
       localStorage.setItem('reset_email', email);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      });
 
-      if (error) {
-        throw error;
+      const resp = await fetch(
+        'https://ayqvnclmnepqyhvjqxjy.supabase.co/functions/v1/password-reset/request',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error || 'Failed to send reset email');
       }
 
       setIsSuccess(true);
       toast({
-        title: "Reset link sent",
-        description: "Check your email for the password reset link."
+        title: 'Reset link sent',
+        description: 'Check your email for the password reset link.'
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      const message = err?.message || 'Failed to send reset email';
+      setError(message);
       toast({
-        title: "Error",
-        description: err.message || 'Failed to send reset email',
-        variant: "destructive"
+        title: 'Error',
+        description: message,
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
