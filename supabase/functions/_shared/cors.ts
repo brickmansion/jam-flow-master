@@ -8,8 +8,9 @@ const allowedOrigins = [
 
 export function getOrigin(req: Request): string {
   const origin = req.headers.get("origin") || "";
-  if (origin && allowedOrigins.includes(origin)) return origin;
-  // Default to first allowed origin
+  // Prefer the actual request origin to generate correct redirect URLs in any environment
+  if (origin) return origin;
+  // Fallback to the first allowed origin
   return allowedOrigins[0];
 }
 

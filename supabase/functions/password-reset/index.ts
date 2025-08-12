@@ -31,6 +31,7 @@ serve(async (req) => {
 
       const origin = getOrigin(req);
       const redirectTo = `${origin}/reset-password`;
+      console.log("password-reset/request", { email, origin, redirectTo });
 
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
@@ -38,8 +39,9 @@ serve(async (req) => {
         console.error("Password reset email error:", error);
         return new Response(JSON.stringify({ error: error.message }), { status: 400, headers });
       }
+      console.log("Password reset email sent OK for", email);
 
-      return new Response(JSON.stringify({ message: "Password reset email sent" }), { status: 200, headers });
+      return new Response(JSON.stringify({ message: "Password reset email sent", redirectTo }), { status: 200, headers });
     }
 
     // GET /password-reset/session?token_hash=... OR ?token=...&email=...
